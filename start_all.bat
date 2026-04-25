@@ -8,15 +8,19 @@ echo  ╚═══════════════════════�
 echo.
 
 :: ─── 1. Backend (Python FastAPI) ─────────────────────────────
-echo  [1/2] Starting Backend API on http://127.0.0.1:8742 ...
+echo  [1/3] Starting Backend API on http://127.0.0.1:8742 ...
 start "ARIA Backend" cmd /k "cd /d "%~dp0aria-backend" && (if not exist .venv (echo Creating virtual environment... && python -m venv .venv)) && call .venv\Scripts\activate.bat && pip install -r requirements.txt -q && echo. && echo ======================================== && echo   ARIA Backend starting on port 8742 && echo ======================================== && python main.py"
 
 :: Wait a few seconds for backend to start before launching frontend
 timeout /t 4 /nobreak >nul
 
 :: ─── 2. Desktop UI (Vite Dev Server) ─────────────────────────
-echo  [2/2] Starting Desktop UI on http://localhost:5173 ...
+echo  [2/3] Starting Desktop UI on http://localhost:5173 ...
 start "ARIA Desktop" cmd /k "cd /d "%~dp0aria-desktop" && npm install --silent && echo. && echo ======================================== && echo   ARIA Desktop UI starting on port 5173 && echo ======================================== && npm run dev"
+
+:: ─── 3. WhatsApp Bridge (Node.js) ────────────────────────────
+echo  [3/3] Starting WhatsApp Bridge on http://localhost:3001 ...
+start "ARIA WhatsApp" cmd /k "cd /d "%~dp0aria-whatsapp" && npm install --silent && echo. && echo ======================================== && echo   ARIA WhatsApp Bridge on port 3001 && echo ======================================== && node bridge.js"
 
 :: Wait for Vite to boot, then open in browser
 timeout /t 5 /nobreak >nul
@@ -28,6 +32,7 @@ echo  ║   All services launched!                                   ║
 echo  ║                                                            ║
 echo  ║   Backend API  : http://127.0.0.1:8742                    ║
 echo  ║   Desktop UI   : http://localhost:5173                     ║
+echo  ║   WhatsApp     : http://localhost:3001                     ║
 echo  ║                                                            ║
 echo  ║   Keep the terminal windows open to view logs.             ║
 echo  ║   Close them to stop ARIA.                                 ║

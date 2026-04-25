@@ -1,9 +1,9 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage } = require("electron");
+const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, dialog } = require("electron");
 const path = require("path");
 
 let tray;
 let dashboardWindow;
-let popupWindow;
+let panelWindow;
 
 function createDashboard() {
   dashboardWindow = new BrowserWindow({
@@ -17,22 +17,25 @@ function createDashboard() {
   dashboardWindow.loadURL("http://localhost:5173");
 }
 
-function createPopup() {
+function createPanel() {
   const primary = screen.getPrimaryDisplay().workAreaSize;
-  popupWindow = new BrowserWindow({
-    width: 360,
-    height: 120,
+  panelWindow = new BrowserWindow({
+    width: 52,
+    height: primary.height,
+    x: primary.width - 52,
+    y: 0,
     frame: false,
+    transparent: true,
+    resizable: false,
     alwaysOnTop: true,
     skipTaskbar: true,
-    show: false,
-    x: primary.width - 376,
-    y: primary.height - 136,
+    hasShadow: false,
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js")
     }
   });
-  popupWindow.loadURL("http://localhost:5173");
+  panelWindow.loadURL("http://localhost:5173/#/panel");
 }
 
 function createTray() {
@@ -50,11 +53,35 @@ function createTray() {
 
 app.whenReady().then(() => {
   createDashboard();
-  createPopup();
+  createPanel();
   createTray();
 });
 
-ipcMain.on("show-popup", (_event, payload) => {
-  popupWindow.show();
-  popupWindow.webContents.send("popup-data", payload);
+ipcMain.on("panel:expand", () => {
+  const primary = screen.getPrimaryDisplay().workAreaSize;
+  panelWindow.setBounds({ x: primary.width - 300, y: 0, width: 300, height: primary.height });
+});
+
+ipcMain.on("panel:collapse", () => {
+  const primary = screen.getPrimaryDisplay().workAreaSize;
+  panelWindow.setBounds({ x: primary.width - 52, y: 0, width: 52, height: primary.height });
+});
+
+ipcMain.on("panel:toggle", (_event, isExpanded) => {
+  const primary = screen.getPrimaryDisplay().workAreaSize;
+  if (isExpanded) {
+    panelWindow.setBounds({ x: primary.width - 300, y: 0, width: 300, height: primary.height });
+  } else {
+    panelWindow.setBounds({ x: primary.width - 52, y: 0, width: 52, height: primary.height });
+  }
+});
+
+ipcMain.on("nudge:new", (_event, payload) => {
+  panelWindow.webContents.send("nudge:new", payload);
+});
+
+ipcMain.handle("dialog:selectFolder", async () => {
+  const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+  if (result.canceled) return null;
+  return result.filePaths[0];
 });

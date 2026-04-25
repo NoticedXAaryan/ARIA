@@ -1,54 +1,34 @@
-from __future__ import annotations
-
-import os
+import logging
 import time
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 from storage.models import NormalizedEvent
+from storage.db import DB
+from connectors.account_manager import AccountManager
 
-
-SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
-
+logger = logging.getLogger(__name__)
 
 class GoogleCalendarConnector:
-    def __init__(self, credentials_file: str | None = None, token_file: str | None = None) -> None:
-        self.credentials_file = credentials_file or os.getenv("GOOGLE_CREDENTIALS_FILE", "")
-        appdata = Path.home() / "AppData" / "Roaming" / "ARIA"
-        appdata.mkdir(parents=True, exist_ok=True)
-        self.token_file = token_file or str(appdata / "google_token.json")
-
-    def _get_credentials(self) -> Credentials | None:
-        creds: Credentials | None = None
-        if os.path.exists(self.token_file):
-            creds = Credentials.from_authorized_user_file(self.token_file, SCOPES)
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            Path(self.token_file).write_text(creds.to_json(), encoding="utf-8")
-            return creds
-        if creds and creds.valid:
-            return creds
-        if not self.credentials_file or not os.path.exists(self.credentials_file):
-            return None
-
-        flow = InstalledAppFlow.from_client_secrets_file(self.credentials_file, SCOPES)
-        creds = flow.run_local_server(port=0)
-        Path(self.token_file).write_text(creds.to_json(), encoding="utf-8")
-        return creds
+    def __init__(self, account_id: str, email: str, db: DB) -> None:
+        self.account_id = account_id
+        self.email = email
+        self.db = db
+        self.account_manager = AccountManager(self.db)
 
     def fetch_events(self) -> list[NormalizedEvent]:
-        creds = self._get_credentials()
-        if not creds:
-            return []
+        access_token = self.account_manager.refresh_token_if_needed(self.account_id)
+        if not access_token:
+            raise ValueError(f"No access token for Google Calendar account {self.account_id}")
 
+        creds = Credentials(access_token)
         service = build("calendar", "v3", credentials=creds, cache_discovery=False)
+        
         now = datetime.now(timezone.utc).isoformat()
         seven_days = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        
         payload = (
             service.events()
             .list(
@@ -60,6 +40,7 @@ class GoogleCalendarConnector:
             )
             .execute()
         )
+        
         items = payload.get("items", [])
         normalized: list[NormalizedEvent] = []
         for event in items:
@@ -67,19 +48,23 @@ class GoogleCalendarConnector:
             end = event.get("end", {}).get("dateTime") or event.get("end", {}).get("date")
             if not start:
                 continue
+            
             start_ts = int(datetime.fromisoformat(start.replace("Z", "+00:00")).timestamp())
             end_ts = (
                 int(datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()) if end else None
             )
+            
             normalized.append(
                 NormalizedEvent(
-                    external_id=f"gcal:{event.get('id', str(time.time()))}",
+                    external_id=f"gcal:{self.account_id}:{event.get('id', str(time.time()))}",
                     source="google_calendar",
                     type="meeting",
                     title=event.get("summary", "Untitled Event"),
                     start_ts=start_ts,
                     end_ts=end_ts,
                     metadata_json={
+                        "account_id": self.account_id,
+                        "email": self.email,
                         "attendee_count": len(event.get("attendees", [])),
                         "status": event.get("status", "confirmed"),
                     },

@@ -1,89 +1,354 @@
-import { useState, useEffect } from "react";
-import { Chip } from "@heroui/react";
-import { Settings, FolderOpen, Calendar, Mail, Bot, LogOut, Save, CheckCircle2, Key, Bell, RefreshCw } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { logout } from "../lib/firebase";
+import React, { useState, useEffect } from "react";
+import { 
+  Card, CardBody, Button, Switch, Slider, Input, Divider, Avatar, 
+  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Spinner
+} from "@heroui/react";
+import { 
+  CheckCircle2, XCircle, Settings, Mail, Calendar, Trash2, Smartphone, MonitorPlay, Activity, Brain, Link as LinkIcon
+} from "lucide-react";
 
 const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
 
-function Section({ icon: Icon, title, color = "var(--aria-accent-light)", children }) {
-  return (
-    <div className="glass" style={{ borderRadius: 16, padding: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Icon size={16} color={color} />
-        </div>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>{title}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export default function SettingsTab() {
-  const { resetSetup } = useAuth();
-  const [s, setS] = useState({ notes_folder_path: "", max_nudges_per_day: 8, openrouter_api_key: "" });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState([]);
+  const [health, setHealth] = useState([]);
+  const [settings, setSettings] = useState({});
+  const [memoryStats, setMemoryStats] = useState({ events: 0, facts: 0, habits: 0 });
+  const [pairData, setPairData] = useState(null);
+  const {isOpen, onOpen, onOpenChange} = useDisclosure();
+  const {isOpen: isPairOpen, onOpen: onPairOpen, onOpenChange: onPairChange} = useDisclosure();
 
-  useEffect(() => { (async () => { try { const r = await fetch(`${API}/api/settings`); if (r.ok) { const data = await r.json(); setS(prev => ({ ...prev, ...data })); } } catch {} })(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const save = async () => {
-    setSaving(true);
-    try { await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ updates: s }) }); setSaved(true); setTimeout(() => setSaved(false), 2000); } catch {}
-    setSaving(false);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [accRes, healthRes, setRes, memRes] = await Promise.all([
+        fetch(`${API}/api/accounts`),
+        fetch(`${API}/api/health`),
+        fetch(`${API}/api/settings`),
+        fetch(`${API}/api/memory/stats`)
+      ]);
+      setAccounts(await accRes.json());
+      setHealth(await healthRes.json());
+      setSettings(await setRes.json());
+      setMemoryStats(await memRes.json());
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
   };
 
+  const updateSetting = async (key, value) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    try {
+      await fetch(`${API}/api/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updates: { [key]: value } })
+      });
+    } catch (e) {
+      console.error("Failed to update setting", e);
+    }
+  };
+
+  const addGoogleAccount = async () => {
+    try {
+      const res = await fetch(`${API}/api/accounts/google/start`, { method: "POST" });
+      const data = await res.json();
+      if (data.auth_url) window.open(data.auth_url, "_blank");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const addOutlookAccount = async () => {
+    try {
+      const res = await fetch(`${API}/api/accounts/outlook/start`, { method: "POST" });
+      const data = await res.json();
+      if (data.auth_url) window.open(data.auth_url, "_blank");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const removeAccount = async (id) => {
+    try {
+      await fetch(`${API}/api/accounts/${id}`, { method: "DELETE" });
+      setAccounts(accounts.filter(a => a.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const clearMemory = async (onClose) => {
+    try {
+      await fetch(`${API}/api/memory/clear`, { method: "DELETE" });
+      setMemoryStats({ events: 0, facts: 0, habits: 0 });
+      onClose();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const changeNotesFolder = async () => {
+    if (window.ariaDesktop?.selectFolder) {
+      const path = await window.ariaDesktop.selectFolder();
+      if (path) updateSetting("notes_folder_path", path);
+    } else {
+      alert("Folder selection requires the desktop app.");
+    }
+  };
+
+  const getHealthStatus = (connectorName) => {
+    const status = health.find(h => h.connector.startsWith(connectorName));
+    if (!status) return null;
+    return status.status;
+  };
+
+  const generatePairCode = async () => {
+    try {
+      const res = await fetch(`${API}/api/pair/code`);
+      if (res.ok) {
+        setPairData(await res.json());
+        onPairOpen();
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to generate pair code");
+    }
+  };
+
+  if (loading) {
+    return <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Spinner color="secondary" /></div>;
+  }
+
   return (
-    <div style={{ maxWidth: 600, display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-        <Settings size={18} color="var(--aria-accent-light)" /><span style={{ fontSize: 16, fontWeight: 600 }}>Settings</span>
-      </div>
-
-      <Section icon={Calendar} title="Connected Services" color="#4285F4">
-        {[{ name: "Google Calendar", icon: Calendar, c: "#4285F4" }, { name: "Gmail", icon: Mail, c: "#EA4335" }].map(svc => (
-          <div key={svc.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><svc.icon size={14} color={svc.c} /><span style={{ fontSize: 13 }}>{svc.name}</span></div>
-            <Chip size="sm" color={s.google_linked ? "success" : "warning"} variant="flat">{s.google_linked ? "Connected" : "Not linked"}</Chip>
-          </div>
-        ))}
-      </Section>
-
-      <Section icon={FolderOpen} title="Notes Folder" color="#a855f7">
-        <input value={s.notes_folder_path || ""} onChange={e => setS(p => ({ ...p, notes_folder_path: e.target.value }))} placeholder="C:\Users\you\Documents\Notes"
-          style={{ width: "100%", height: 40, borderRadius: 10, background: "var(--aria-surface)", border: "1px solid var(--aria-border)", color: "var(--aria-text)", fontSize: 13, padding: "0 14px", outline: "none" }}
-          onFocus={e => e.target.style.borderColor = "var(--aria-accent)"} onBlur={e => e.target.style.borderColor = "var(--aria-border)"} />
-      </Section>
-
-      <Section icon={Bot} title="AI Configuration" color="#6366f1">
-        <input type="password" value={s.openrouter_api_key || ""} onChange={e => setS(p => ({ ...p, openrouter_api_key: e.target.value }))} placeholder="sk-or-v1-..."
-          style={{ width: "100%", height: 40, borderRadius: 10, background: "var(--aria-surface)", border: "1px solid var(--aria-border)", color: "var(--aria-text)", fontSize: 13, padding: "0 14px", outline: "none" }}
-          onFocus={e => e.target.style.borderColor = "var(--aria-accent)"} onBlur={e => e.target.style.borderColor = "var(--aria-border)"} />
-      </Section>
-
-      <Section icon={Bell} title="Notifications" color="#f59e0b">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontSize: 13 }}>Max nudges/day: {s.max_nudges_per_day}</span>
-          <input type="range" min={1} max={20} value={s.max_nudges_per_day} onChange={e => setS(p => ({ ...p, max_nudges_per_day: Number(e.target.value) }))} style={{ width: 120, accentColor: "var(--aria-accent)" }} />
+    <div style={{ padding: "0 16px 24px", color: "var(--aria-text)" }}>
+      {/* 1. Connected Accounts */}
+      <section style={{ marginBottom: 32 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Connected Accounts</h3>
+        <Card className="glass" style={{ marginBottom: 16 }}>
+          <CardBody style={{ gap: 12, padding: 16 }}>
+            {accounts.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--aria-text-muted)" }}>No accounts connected.</p>
+            ) : (
+              accounts.map(acc => (
+                <div key={acc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <Avatar name={acc.email} size="sm" src={acc.provider === "google" ? "https://www.google.com/favicon.ico" : "https://outlook.live.com/favicon.ico"} />
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500 }}>{acc.email}</div>
+                      <div style={{ fontSize: 12, color: "var(--aria-text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ textTransform: "capitalize" }}>{acc.provider}</span>
+                        <span>•</span>
+                        {getHealthStatus(acc.provider === "google" ? "GoogleCalendar" : "OutlookCalendar") === "down" ? (
+                          <span style={{ color: "#ef4444", display: "flex", alignItems: "center", gap: 4 }}><XCircle size={12}/> Error</span>
+                        ) : (
+                          <span style={{ color: "#22c55e", display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12}/> Syncing</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Button isIconOnly variant="light" color="danger" size="sm" onPress={() => removeAccount(acc.id)}>
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              ))
+            )}
+          </CardBody>
+        </Card>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button size="sm" color="secondary" variant="flat" onPress={addGoogleAccount} startContent={<Mail size={16} />}>Add Google</Button>
+          <Button size="sm" color="secondary" variant="flat" onPress={addOutlookAccount} startContent={<Calendar size={16} />}>Add Outlook</Button>
+          <Button size="sm" color="primary" variant="flat" onPress={generatePairCode} startContent={<Smartphone size={16} />}>Connect Phone</Button>
         </div>
-      </Section>
+      </section>
 
-      <button onClick={save} disabled={saving}
-        style={{ width: "100%", height: 44, borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          background: saved ? "rgba(34,197,94,0.15)" : "linear-gradient(135deg, var(--aria-gradient-start), var(--aria-gradient-end))", color: saved ? "#22c55e" : "white" }}>
-        {saved ? <><CheckCircle2 size={16} /> Saved!</> : <><Save size={16} /> {saving ? "Saving..." : "Save Settings"}</>}
-      </button>
+      {/* 2. Data Sources */}
+      <section style={{ marginBottom: 32 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Data Sources</h3>
+        <Card className="glass">
+          <CardBody style={{ gap: 16, padding: 16 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Notes Folder</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Input size="sm" isReadOnly value={settings.notes_folder_path || "Not configured"} style={{ flex: 1 }} />
+                <Button size="sm" variant="flat" color="secondary" onPress={changeNotesFolder}>Change</Button>
+              </div>
+            </div>
+            
+            <Divider />
+            
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <MonitorPlay size={18} color="var(--aria-text-muted)" />
+                <span style={{ fontSize: 14 }}>ActivityWatch</span>
+              </div>
+              {getHealthStatus("ActivityWatch") === "ok" ? (
+                <div style={{ color: "#22c55e", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12}/> Running</div>
+              ) : (
+                <Button size="sm" variant="light" color="primary" onPress={() => window.open("https://activitywatch.net/downloads/", "_blank")}>Install</Button>
+              )}
+            </div>
 
-      <Section icon={LogOut} title="Account" color="#ef4444">
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={resetSetup} style={{ flex: 1, height: 36, borderRadius: 8, background: "rgba(245,158,11,0.1)", border: "none", color: "#f59e0b", cursor: "pointer", fontSize: 12, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <RefreshCw size={12} /> Re-run Setup
-          </button>
-          <button onClick={logout} style={{ flex: 1, height: 36, borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 12, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <LogOut size={12} /> Sign Out
-          </button>
+            <Divider />
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Smartphone size={18} color="var(--aria-text-muted)" />
+                <span style={{ fontSize: 14 }}>WhatsApp</span>
+              </div>
+              <Button size="sm" variant="light" color="secondary" onPress={() => window.open("https://web.whatsapp.com", "_blank")}>Connect</Button>
+            </div>
+          </CardBody>
+        </Card>
+      </section>
+
+      {/* 3. Behaviour */}
+      <section style={{ marginBottom: 32 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Behaviour</h3>
+        <Card className="glass">
+          <CardBody style={{ gap: 20, padding: 16 }}>
+            <div style={{ display: "flex", gap: 16 }}>
+              <Input type="time" label="Focus Start" size="sm" value={settings.focus_start || "09:00"} onChange={(e) => updateSetting("focus_start", e.target.value)} />
+              <Input type="time" label="Focus End" size="sm" value={settings.focus_end || "12:00"} onChange={(e) => updateSetting("focus_end", e.target.value)} />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Nudge Intensity</div>
+              <Slider 
+                step={1} 
+                maxValue={3} 
+                minValue={1} 
+                defaultValue={settings.nudge_intensity === "low" ? 1 : settings.nudge_intensity === "high" ? 3 : 2}
+                marks={[
+                  {value: 1, label: "Low"},
+                  {value: 2, label: "Med"},
+                  {value: 3, label: "High"},
+                ]}
+                onChangeEnd={(val) => updateSetting("nudge_intensity", val === 1 ? "low" : val === 3 ? "high" : "medium")}
+                color="secondary"
+                size="sm"
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+              <span style={{ fontSize: 14 }}>Silent on Weekends</span>
+              <Switch size="sm" color="secondary" isSelected={settings.silent_weekends !== "false"} onValueChange={(val) => updateSetting("silent_weekends", val ? "true" : "false")} />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>EOD Summary</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Input type="time" size="sm" value={settings.eod_time || "17:30"} onChange={(e) => updateSetting("eod_time", e.target.value)} style={{ width: 100 }} />
+                <Switch size="sm" color="secondary" isSelected={settings.eod_enabled !== "false"} onValueChange={(val) => updateSetting("eod_enabled", val ? "true" : "false")} />
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </section>
+
+      {/* 4. ARIA Memory */}
+      <section style={{ marginBottom: 32 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>ARIA Memory</h3>
+        <Card className="glass">
+          <CardBody style={{ gap: 16, padding: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <Brain size={18} color="var(--aria-primary)" />
+              <span style={{ fontSize: 14, fontWeight: 500 }}>What ARIA knows</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, textAlign: "center" }}>
+              <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 8px", borderRadius: 12 }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "var(--aria-primary)" }}>{memoryStats.events}</div>
+                <div style={{ fontSize: 11, color: "var(--aria-text-muted)" }}>EVENTS</div>
+              </div>
+              <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 8px", borderRadius: 12 }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "var(--aria-secondary)" }}>{memoryStats.facts}</div>
+                <div style={{ fontSize: 11, color: "var(--aria-text-muted)" }}>FACTS</div>
+              </div>
+              <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 8px", borderRadius: 12 }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "var(--aria-accent)" }}>{memoryStats.habits}</div>
+                <div style={{ fontSize: 11, color: "var(--aria-text-muted)" }}>HABITS</div>
+              </div>
+            </div>
+            <Button size="sm" color="danger" variant="flat" onPress={onOpen} fullWidth style={{ marginTop: 8 }}>
+              Clear All Memory
+            </Button>
+          </CardBody>
+        </Card>
+      </section>
+
+      {/* 5. About */}
+      <section>
+        <div style={{ textAlign: "center", padding: "16px 0", color: "var(--aria-text-muted)", fontSize: 12 }}>
+          <div style={{ fontWeight: 600, color: "var(--aria-text)", marginBottom: 4 }}>ARIA Desktop v0.2.0</div>
+          <div>Model: {settings.openrouter_api_key ? "OpenRouter" : "Ollama Local"}</div>
+          <div>Engine: Native Python</div>
         </div>
-      </Section>
+      </section>
+
+      {/* Clear Memory Modal */}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop="blur">
+        <ModalContent style={{ background: "var(--aria-bg-dark)", border: "1px solid var(--aria-border)" }}>
+          {(onClose) => (
+            <>
+              <ModalHeader style={{ color: "#ef4444" }}>Clear ARIA's Memory?</ModalHeader>
+              <ModalBody>
+                <p style={{ fontSize: 14 }}>
+                  This will permanently delete all events, facts, and habits ARIA has learned about you. It cannot be undone.
+                </p>
+                <p style={{ fontSize: 14, color: "var(--aria-text-muted)" }}>
+                  (OAuth connections and settings will not be affected.)
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>Cancel</Button>
+                <Button color="danger" onPress={() => clearMemory(onClose)}>Delete Everything</Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Pair Phone Modal */}
+      <Modal isOpen={isPairOpen} onOpenChange={onPairChange} backdrop="blur">
+        <ModalContent style={{ background: "var(--aria-bg-dark)", border: "1px solid var(--aria-border)" }}>
+          {(onClose) => (
+            <>
+              <ModalHeader>Pair Mobile App</ModalHeader>
+              <ModalBody style={{ textAlign: "center", paddingBottom: 20 }}>
+                <p style={{ fontSize: 14, color: "var(--aria-text-muted)", marginBottom: 16 }}>
+                  Enter this 6-digit code in the ARIA mobile app.
+                </p>
+                {pairData && (
+                  <>
+                    <div style={{ fontSize: 40, fontWeight: "800", letterSpacing: 8, color: "var(--aria-primary)", marginBottom: 16 }}>
+                      {pairData.code}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--aria-text-muted)" }}>
+                      Desktop IP: {pairData.desktop_ip}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--aria-warning)", marginTop: 8 }}>
+                      Expires in {Math.floor(pairData.expires_in / 60)} minutes
+                    </div>
+                  </>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="flat" onPress={onClose}>Close</Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
     </div>
   );
 }

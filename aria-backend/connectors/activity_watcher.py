@@ -13,12 +13,9 @@ class ActivityWatchConnector:
         self.base_url = base_url.rstrip("/")
 
     def fetch_events(self) -> list[NormalizedEvent]:
-        try:
-            buckets_resp = requests.get(f"{self.base_url}/api/0/buckets", timeout=5)
-            buckets_resp.raise_for_status()
-            buckets: dict[str, Any] = buckets_resp.json()
-        except requests.RequestException:
-            return []
+        buckets_resp = requests.get(f"{self.base_url}/api/0/buckets", timeout=5)
+        buckets_resp.raise_for_status()
+        buckets: dict[str, Any] = buckets_resp.json()
 
         aw_window_bucket = next((k for k in buckets.keys() if "window" in k), None)
         if not aw_window_bucket:
@@ -26,16 +23,13 @@ class ActivityWatchConnector:
 
         now = int(time.time())
         start = now - 900
-        try:
-            events_resp = requests.get(
-                f"{self.base_url}/api/0/buckets/{aw_window_bucket}/events",
-                params={"start": start, "end": now},
-                timeout=5,
-            )
-            events_resp.raise_for_status()
-            raw_events: list[dict[str, Any]] = events_resp.json()
-        except requests.RequestException:
-            return []
+        events_resp = requests.get(
+            f"{self.base_url}/api/0/buckets/{aw_window_bucket}/events",
+            params={"start": start, "end": now},
+            timeout=5,
+        )
+        events_resp.raise_for_status()
+        raw_events: list[dict[str, Any]] = events_resp.json()
 
         normalized: list[NormalizedEvent] = []
         for item in raw_events:

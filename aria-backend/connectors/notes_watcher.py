@@ -15,7 +15,7 @@ class NotesWatcherConnector:
 
     def fetch_events(self) -> list[NormalizedEvent]:
         if not self.notes_path or not self.notes_path.exists() or not self.notes_path.is_dir():
-            return []
+            raise ValueError(f"Invalid notes path: {self.notes_path}")
 
         events: list[NormalizedEvent] = []
         for md_file in self.notes_path.rglob("*.md"):

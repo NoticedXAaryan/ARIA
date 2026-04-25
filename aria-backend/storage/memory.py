@@ -23,6 +23,24 @@ class MemoryStore:
     def _embed(self, text: str) -> list[float]:
         return self.model.encode([text])[0].tolist()
 
+    def get_stats(self) -> dict[str, int]:
+        return {
+            "events": self.episodic.count(),
+            "facts": self.semantic.count(),
+            "habits": self.procedural.count()
+        }
+
+    def clear_all(self) -> None:
+        try:
+            self.client.delete_collection("aria_episodic")
+            self.client.delete_collection("aria_semantic")
+            self.client.delete_collection("aria_procedural")
+            self.episodic = self.client.get_or_create_collection("aria_episodic")
+            self.semantic = self.client.get_or_create_collection("aria_semantic")
+            self.procedural = self.client.get_or_create_collection("aria_procedural")
+        except Exception:
+            pass
+
     def add_episodic_event(
         self,
         event_id: str,

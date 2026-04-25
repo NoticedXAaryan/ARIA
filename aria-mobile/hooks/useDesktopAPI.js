@@ -23,6 +23,30 @@ export function createDesktopAPI(baseUrl, token) {
         body: JSON.stringify({ title })
       });
       return r.json();
+    },
+    getLookahead: async (hours = 6) => {
+      const r = await fetch(`${baseUrl}/api/calendar/lookahead?hours=${hours}`, { headers });
+      return r.json();
+    },
+    verifyPairCode: async (token) => {
+      const r = await fetch(`${baseUrl}/api/pair/verify`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ token })
+      });
+      return r.json();
+    },
+    registerDevice: async (device_id, push_token, platform) => {
+      const r = await fetch(`${baseUrl}/api/pair/register`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ device_id, push_token, platform })
+      });
+      return r.json();
+    },
+    getStatus: async () => {
+      const r = await fetch(`${baseUrl}/api/status`, { headers });
+      return r.json();
     }
   };
 }

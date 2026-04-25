@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Spinner } from "@heroui/react";
 import { useAuth } from "./context/AuthContext";
@@ -7,6 +7,8 @@ import SetupWizard from "./pages/SetupWizard";
 import Dashboard from "./components/Dashboard";
 import TrayPopup from "./components/TrayPopup";
 import ExpandedPanel from "./components/ExpandedPanel";
+import SidePanel from "./components/SidePanel";
+import OnboardingWizard from "./components/OnboardingWizard";
 
 const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
 
@@ -41,6 +43,14 @@ export default function App() {
   const { user, loading, setupComplete } = useAuth();
   const [popupNudge, setPopupNudge] = useState(null);
   const [expandedNudge, setExpandedNudge] = useState(null);
+  const [isConfigured, setIsConfigured] = useState(null); // null means loading
+
+  useEffect(() => {
+    fetch(`${API}/api/setup/status`)
+      .then(r => r.json())
+      .then(d => setIsConfigured(d.is_configured))
+      .catch(() => setIsConfigured(false));
+  }, []);
 
   const handlePopupFeedback = useCallback(
     async (id, outcome) => {
@@ -67,15 +77,21 @@ export default function App() {
   }, []);
 
   // Loading state
-  if (loading) return <LoadingScreen />;
+  if (loading || isConfigured === null) return <LoadingScreen />;
 
   // Not authenticated → Login
   if (!user) return <LoginPage />;
 
-  // Authenticated but not set up → Setup Wizard
-  if (!setupComplete) return <SetupWizard />;
-
   // Fully authenticated and set up → Dashboard + popups
+  // Handle onboarding modal
+  if (isConfigured === false) {
+    return <OnboardingWizard onComplete={() => setIsConfigured(true)} />;
+  }
+  // Handle hash routing for the SidePanel
+  if (window.location.hash === "#/panel") {
+    return <SidePanel />;
+  }
+
   return (
     <>
       <Dashboard />
