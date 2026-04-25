@@ -1,0 +1,134 @@
+
+<style>
+  .surface-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .mock-card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .pill-urgent { background: var(--color-background-danger); color: var(--color-text-danger); }
+  .pill-low    { background: var(--color-background-secondary); color: var(--color-text-tertiary); }
+  .pill-ok     { background: var(--color-background-success); color: var(--color-text-success); }
+  .action-row  { display:flex; gap:8px; margin-top:8px; }
+  .act-btn {
+    font-size:12px; padding:4px 10px;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-secondary);
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+  }
+  .act-btn.primary { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; }
+  .row3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+  .col { }
+  .nudge-bar {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .dot { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+  .dot-amber { background:#BA7517; }
+  .dot-blue  { background:#185FA5; }
+  .dot-gray  { background:#888780; }
+  .setting-row { display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px; }
+  .setting-row:last-child { border-bottom:none; }
+  .toggle-sm { width:28px;height:16px;background:var(--color-background-info);border-radius:8px;position:relative;flex-shrink:0; }
+  .toggle-sm-off { background:var(--color-border-secondary); }
+  .knob { position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:#fff; }
+  .knob-off { right:auto;left:2px; }
+</style>
+
+<div class="row3">
+
+  <!-- Surface 1: Ambient widget -->
+  <div class="col">
+    <div class="surface-label">1 — Ambient widget</div>
+    <div class="mock-card" style="background:var(--color-background-secondary)">
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:4px">ARIA · 2:47 pm</div>
+      <div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px">Focus block · 43 min left</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">3 tasks queued · next meeting 4pm</div>
+      <div style="width:100%;height:4px;background:var(--color-border-tertiary);border-radius:2px">
+        <div style="width:62%;height:4px;background:#185FA5;border-radius:2px"></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">Always-visible system tray or desktop widget. No interaction required. Updates every 15 min.</div>
+  </div>
+
+  <!-- Surface 2: Nudge / action card -->
+  <div class="col">
+    <div class="surface-label">2 — Nudge card</div>
+    <div class="mock-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Prep for 4pm review</span>
+        <span class="pill pill-urgent">urgent</span>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">You usually spend 20 min on this. Only 25 min left in your focus block.</div>
+      <div class="action-row">
+        <button class="act-btn primary">Start now</button>
+        <button class="act-btn">Snooze 10m</button>
+        <button class="act-btn">Dismiss</button>
+      </div>
+    </div>
+    <div class="mock-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Reply to Priya</span>
+        <span class="pill pill-low">can wait</span>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">Queued for after your meeting.</div>
+      <div class="action-row">
+        <button class="act-btn">View</button>
+        <button class="act-btn">Dismiss</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">OS notification or floating toast. Only shown when interrupt gate allows.</div>
+  </div>
+
+  <!-- Surface 3: Dashboard + settings -->
+  <div class="col">
+    <div class="surface-label">3 — Dashboard</div>
+    <div class="mock-card">
+      <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px">Today's rhythm</div>
+      <div class="nudge-bar" style="padding:6px 10px;margin-bottom:5px">
+        <div class="dot dot-blue"></div>
+        <span style="font-size:12px;color:var(--color-text-primary)">Standup reminder</span>
+        <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:auto">accepted</span>
+      </div>
+      <div class="nudge-bar" style="padding:6px 10px;margin-bottom:5px">
+        <div class="dot dot-amber"></div>
+        <span style="font-size:12px;color:var(--color-text-primary)">Review prep nudge</span>
+        <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:auto">snoozed</span>
+      </div>
+      <div class="nudge-bar" style="padding:6px 10px;margin-bottom:10px">
+        <div class="dot dot-gray"></div>
+        <span style="font-size:12px;color:var(--color-text-primary)">Reply to Priya</span>
+        <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:auto">dismissed</span>
+      </div>
+      <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">Settings</div>
+      <div class="setting-row"><span style="color:var(--color-text-primary)">Focus hours</span><span style="color:var(--color-text-secondary);font-size:12px">9am–12pm</span></div>
+      <div class="setting-row"><span style="color:var(--color-text-primary)">Nudge intensity</span><div class="toggle-sm"><div class="knob"></div></div></div>
+      <div class="setting-row"><span style="color:var(--color-text-primary)">Silent on weekends</span><div class="toggle-sm toggle-sm-off"><div class="knob knob-off"></div></div></div>
+    </div>
+    <div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">Local web UI (localhost). View nudge history, tune settings, inspect what ARIA learned.</div>
+  </div>
+
+</div>

@@ -1,0 +1,75 @@
+
+<style>
+  .stack-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; margin-bottom:12px; }
+  .stack-card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 12px 14px;
+  }
+  .stack-label { font-size:11px;font-weight:500;letter-spacing:0.07em;color:var(--color-text-tertiary);margin-bottom:6px; }
+  .tool-row { display:flex;align-items:baseline;gap:8px;margin-bottom:4px; }
+  .tool-name { font-size:13px;font-weight:500;color:var(--color-text-primary); }
+  .tool-why { font-size:12px;color:var(--color-text-secondary); }
+  .free-pill { font-size:10px;padding:1px 6px;border-radius:10px;background:var(--color-background-success);color:var(--color-text-success);flex-shrink:0; }
+</style>
+
+<div class="stack-grid">
+
+  <div class="stack-card">
+    <div class="stack-label">LLM inference</div>
+    <div class="tool-row"><span class="tool-name">OpenRouter</span><span class="free-pill">free tier</span></div>
+    <div class="tool-why" style="margin-bottom:8px">Gemini 2.0 Flash, Llama 3.1 8B — free daily quota. Use for suggestion generation and memory summarization.</div>
+    <div class="tool-row"><span class="tool-name">Ollama</span><span class="free-pill">fully free</span></div>
+    <div class="tool-why">Run Llama 3.2 3B or Phi-3 Mini locally. Zero cost, zero latency, fully offline. Use for the interrupt gate scoring.</div>
+  </div>
+
+  <div class="stack-card">
+    <div class="stack-label">Embeddings + vector memory</div>
+    <div class="tool-row"><span class="tool-name">sentence-transformers</span><span class="free-pill">free</span></div>
+    <div class="tool-why" style="margin-bottom:8px">all-MiniLM-L6-v2 — tiny, fast, runs on CPU. On-device embedding of notes, tasks, calendar events.</div>
+    <div class="tool-row"><span class="tool-name">ChromaDB</span><span class="free-pill">free</span></div>
+    <div class="tool-why">Local vector store. Persists semantic memory. Simple Python API, zero infra needed.</div>
+  </div>
+
+  <div class="stack-card">
+    <div class="stack-label">Behavior model</div>
+    <div class="tool-row"><span class="tool-name">PyTorch Geometric</span><span class="free-pill">free</span></div>
+    <div class="tool-why" style="margin-bottom:8px">GNN for the temporal rhythm model. Lightweight, runs on CPU for small graphs (hours × days).</div>
+    <div class="tool-row"><span class="tool-name">scikit-learn</span><span class="free-pill">free</span></div>
+    <div class="tool-why">Activity transition model for early stages — use an HMM or simple Markov chain before upgrading to transformer.</div>
+  </div>
+
+  <div class="stack-card">
+    <div class="stack-label">Data connectors</div>
+    <div class="tool-row"><span class="tool-name">Google Calendar API</span><span class="free-pill">free</span></div>
+    <div class="tool-why" style="margin-bottom:8px">OAuth2 + free tier. Pull events, detect meeting density, lookahead window.</div>
+    <div class="tool-row"><span class="tool-name">caldav / ical</span><span class="free-pill">free</span></div>
+    <div class="tool-why" style="margin-bottom:8px">For non-Google calendars (Outlook, Apple). Parse .ics files locally.</div>
+    <div class="tool-row"><span class="tool-name">watchdog (Python)</span><span class="free-pill">free</span></div>
+    <div class="tool-why">Watch local note folders (Obsidian, Notion export, .md files) for changes. No API needed.</div>
+  </div>
+
+  <div class="stack-card">
+    <div class="stack-label">Persistent storage</div>
+    <div class="tool-row"><span class="tool-name">SQLite</span><span class="free-pill">free</span></div>
+    <div class="tool-why" style="margin-bottom:8px">Episodic memory store — events, nudge history, feedback log. Zero setup, single file.</div>
+    <div class="tool-row"><span class="tool-name">ChromaDB</span><span class="free-pill">free</span></div>
+    <div class="tool-why">Semantic + procedural memory as vector embeddings. Already listed above — same instance.</div>
+  </div>
+
+  <div class="stack-card">
+    <div class="stack-label">Background daemon + UI</div>
+    <div class="tool-row"><span class="tool-name">APScheduler</span><span class="free-pill">free</span></div>
+    <div class="tool-why" style="margin-bottom:8px">Python scheduler. Runs context check loop every 15 min, re-trains GNN nightly.</div>
+    <div class="tool-row"><span class="tool-name">Plyer / notify-py</span><span class="free-pill">free</span></div>
+    <div class="tool-why" style="margin-bottom:8px">Cross-platform OS notifications (Windows/Mac/Linux). Sends nudge cards.</div>
+    <div class="tool-row"><span class="tool-name">FastAPI + Jinja2</span><span class="free-pill">free</span></div>
+    <div class="tool-why">Localhost dashboard (port 7860 or 8000). Settings page + nudge history.</div>
+  </div>
+
+</div>
+
+<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 14px;font-size:12px;color:var(--color-text-secondary)">
+  Total monthly cost: <strong style="color:var(--color-text-primary)">₹0</strong> — Ollama handles most inference locally. OpenRouter free tier (Gemini Flash) covers heavier generation tasks like suggestion drafting.
+</div>

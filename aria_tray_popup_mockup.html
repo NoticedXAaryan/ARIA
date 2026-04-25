@@ -1,0 +1,199 @@
+
+<style>
+  .screen {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 20px;
+    position: relative;
+    min-height: 320px;
+    overflow: hidden;
+  }
+  .taskbar {
+    position:absolute; bottom:0; left:0; right:0;
+    height:38px; background:var(--color-background-primary);
+    border-top: 0.5px solid var(--color-border-tertiary);
+    display:flex; align-items:center; padding:0 14px;
+    gap:10px;
+  }
+  .tray-area {
+    margin-left:auto; display:flex; align-items:center; gap:8px;
+    font-size:11px; color:var(--color-text-tertiary);
+  }
+  .tray-icon {
+    width:18px;height:18px;border-radius:4px;
+    background:var(--color-background-info);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;color:var(--color-text-info);font-weight:700;
+    cursor:pointer; position:relative;
+  }
+  .tray-dot {
+    position:absolute;top:-2px;right:-2px;
+    width:6px;height:6px;border-radius:50%;
+    background:#BA7517;border:1px solid var(--color-background-primary);
+  }
+  .nudge-popup {
+    position:absolute; bottom:48px; right:16px;
+    width:260px;
+    background:var(--color-background-primary);
+    border:0.5px solid var(--color-border-secondary);
+    border-radius:10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    padding:12px 14px;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .nudge-header {
+    display:flex;align-items:center;gap:7px;margin-bottom:7px;
+  }
+  .aria-badge {
+    font-size:10px;font-weight:600;letter-spacing:0.05em;
+    color:var(--color-text-info);
+    background:var(--color-background-info);
+    padding:1px 6px;border-radius:8px;
+  }
+  .nudge-title {font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:4px;}
+  .nudge-why  {font-size:11px;color:var(--color-text-secondary);margin-bottom:10px;line-height:1.5;}
+  .nudge-btns {display:flex;gap:6px;}
+  .nb {
+    flex:1;font-size:11px;padding:5px 0;text-align:center;
+    border-radius:6px;border:0.5px solid var(--color-border-secondary);
+    background:transparent;color:var(--color-text-secondary);cursor:pointer;
+  }
+  .nb.p {background:var(--color-background-info);color:var(--color-text-info);border-color:transparent;}
+  .timer-bar {
+    height:2px;background:var(--color-border-tertiary);border-radius:1px;
+    margin-bottom:10px;overflow:hidden;
+  }
+  .timer-fill {
+    height:100%;background:var(--color-text-info);border-radius:1px;
+    animation: drain 12s linear forwards;
+    width:100%;
+  }
+  @keyframes drain { from{width:100%} to{width:0%} }
+
+  .desktop-icons {
+    display:grid;grid-template-columns:repeat(4,48px);gap:12px;
+    padding:20px 0 0 20px;
+  }
+  .dicon { display:flex;flex-direction:column;align-items:center;gap:4px; }
+  .dicon-box { width:40px;height:40px;border-radius:8px;background:var(--color-background-primary); }
+  .dicon-lbl { font-size:9px;color:var(--color-text-tertiary);text-align:center; }
+
+  .state-btns { display:flex;gap:8px;margin:10px 0 6px;flex-wrap:wrap; }
+  .sb {
+    font-size:12px;padding:4px 10px;border-radius:var(--border-radius-md);
+    border:0.5px solid var(--color-border-secondary);background:transparent;
+    color:var(--color-text-secondary);cursor:pointer;transition:background 0.15s;
+  }
+  .sb.active { background:var(--color-background-info);color:var(--color-text-info);border-color:transparent; }
+
+  .label-sm { font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;margin-top:12px; }
+</style>
+
+<div class="label-sm">Simulate nudge state:</div>
+<div class="state-btns">
+  <button class="sb active" onclick="setState('nudge',this)">Nudge appears</button>
+  <button class="sb" onclick="setState('suppressed',this)">In a call — suppressed</button>
+  <button class="sb" onclick="setState('snoozed',this)">Snoozed</button>
+  <button class="sb" onclick="setState('idle',this)">Idle (no nudge)</button>
+</div>
+
+<div class="screen" id="screen">
+
+  <!-- Desktop bg -->
+  <div class="desktop-icons">
+    <div class="dicon"><div class="dicon-box" style="background:#D1E8FF"></div><div class="dicon-lbl">Calendar</div></div>
+    <div class="dicon"><div class="dicon-box" style="background:#E4E1FF"></div><div class="dicon-lbl">Notes</div></div>
+    <div class="dicon"><div class="dicon-box" style="background:#D4F7EE"></div><div class="dicon-lbl">Browser</div></div>
+    <div class="dicon"><div class="dicon-box" style="background:#FFF0C2"></div><div class="dicon-lbl">Slack</div></div>
+  </div>
+
+  <!-- Nudge popup -->
+  <div class="nudge-popup" id="nudge-popup">
+    <div class="nudge-header">
+      <div class="aria-badge">ARIA</div>
+      <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:auto" id="nudge-time">2 min ago</span>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="tbar"></div></div>
+    <div class="nudge-title" id="nudge-title">Prep for 4pm design review</div>
+    <div class="nudge-why" id="nudge-why">You usually take 20 min on this. Focus block ends in 28 min — good time to start.</div>
+    <div class="nudge-btns">
+      <button class="nb p" onclick="doAction('start')">Start now</button>
+      <button class="nb" onclick="doAction('snooze')">Snooze 30m</button>
+      <button class="nb" onclick="doAction('dismiss')">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- Taskbar -->
+  <div class="taskbar">
+    <div style="font-size:11px;color:var(--color-text-tertiary)">2:34 PM</div>
+    <div class="tray-area">
+      <span>↑↓</span>
+      <span>🔊</span>
+      <div class="tray-icon" onclick="openDashboard()" title="Click to open ARIA dashboard">
+        A
+        <div class="tray-dot" id="tray-dot"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="status-msg" style="font-size:12px;color:var(--color-text-tertiary);margin-top:8px;min-height:18px"></div>
+
+<script>
+const states = {
+  nudge: {
+    show: true,
+    title: 'Prep for 4pm design review',
+    why: 'You usually take 20 min on this. Focus block ends in 28 min — good time to start.',
+    dot: true,
+    msg: 'Nudge visible bottom-right. Auto-dismisses after 12 sec if ignored.'
+  },
+  suppressed: {
+    show: false,
+    dot: false,
+    msg: 'Mic is active (you\'re in a call). Interrupt gate suppressed this nudge — it\'ll requeue for after the call.'
+  },
+  snoozed: {
+    show: false,
+    dot: true,
+    msg: 'Snoozed 30 min. Tray dot stays orange — queued nudge waiting. Will resurface at 3:04 PM.'
+  },
+  idle: {
+    show: false,
+    dot: false,
+    msg: 'No pending nudges. ARIA is running silently in the background.'
+  }
+};
+
+function setState(s, btn) {
+  document.querySelectorAll('.sb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const st = states[s];
+  const popup = document.getElementById('nudge-popup');
+  popup.style.display = st.show ? 'block' : 'none';
+  if(st.title) document.getElementById('nudge-title').textContent = st.title;
+  if(st.why)   document.getElementById('nudge-why').textContent   = st.why;
+  document.getElementById('tray-dot').style.display = st.dot ? 'block' : 'none';
+  document.getElementById('status-msg').textContent = st.msg;
+  if(st.show){
+    const tb = document.getElementById('tbar');
+    tb.style.animation = 'none'; tb.offsetHeight;
+    tb.style.animation = 'drain 12s linear forwards';
+  }
+}
+
+function doAction(a){
+  const msgs = {
+    start:   '✓ Logged as accepted. Opening task... (ARIA learns: this urgency level works for you)',
+    snooze:  '⏱ Snoozed 30 min. Re-queues at 3:04 PM. (ARIA learns: 28 min wasn\'t enough lead time)',
+    dismiss: '✕ Dismissed. (ARIA learns: this type of nudge was unwanted here)'
+  };
+  document.getElementById('nudge-popup').style.display='none';
+  document.getElementById('tray-dot').style.display='none';
+  document.getElementById('status-msg').textContent = msgs[a];
+}
+
+function openDashboard(){
+  document.getElementById('status-msg').textContent = 'Opening localhost:7860 in browser — dashboard loads instantly since it\'s all local.';
+}
+</script>

@@ -1,0 +1,139 @@
+
+<style>
+  .step-row { display:flex; gap:0; align-items:stretch; margin-bottom:20px; }
+  .step-num {
+    width:32px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .circle {
+    width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:600;flex-shrink:0;
+  }
+  .line { flex:1; width:2px; background:var(--color-border-tertiary); margin:4px auto 0; }
+  .step-body {
+    flex:1; padding: 0 0 0 12px;
+  }
+  .step-title { font-size:14px;font-weight:600;color:var(--color-text-primary);margin-bottom:3px; }
+  .step-sub   { font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:6px; }
+  .step-detail {
+    background:var(--color-background-secondary);
+    border-radius:var(--border-radius-md);
+    padding:8px 12px;
+    font-size:12px;
+    color:var(--color-text-tertiary);
+    line-height:1.7;
+    margin-bottom:4px;
+  }
+  .tag {
+    display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;margin-right:4px;
+  }
+  .tag-d { background:var(--color-background-info);color:var(--color-text-info); }
+  .tag-p { background:var(--color-background-warning);color:var(--color-text-warning); }
+  .tag-b { background:var(--color-background-secondary);color:var(--color-text-secondary); }
+
+  .c1 { background:#D1E8FF;color:#185FA5; }
+  .c2 { background:#E4E1FF;color:#5145CD; }
+  .c3 { background:#D4F7EE;color:#0F6E56; }
+  .c4 { background:#FFF0C2;color:#8A5A00; }
+  .c5 { background:#FFE5E5;color:#B91C1C; }
+  .c6 { background:#E8E8E6;color:#3D3D3A; }
+</style>
+
+<div style="margin-bottom:20px">
+  <span class="tag tag-d">Desktop</span>
+  <span class="tag tag-p">Phone</span>
+  <span class="tag tag-b">Background</span>
+  <span style="font-size:12px;color:var(--color-text-tertiary);margin-left:4px">— who does what</span>
+</div>
+
+<!-- Step 1 -->
+<div class="step-row">
+  <div class="step-num"><div class="circle c1">1</div><div class="line"></div></div>
+  <div class="step-body">
+    <div class="step-title">Install desktop app <span class="tag tag-d">Desktop</span></div>
+    <div class="step-sub">User downloads one installer (.exe / .dmg / AppImage). It installs the Python daemon + a small system tray icon. Nothing else to configure.</div>
+    <div class="step-detail">
+      On first launch → OAuth popup: "Connect Google Calendar?" → done in 30 seconds.<br>
+      Points to local notes folder (Obsidian vault, or any folder with .md files).<br>
+      Installs ActivityWatch silently in the background if not already present.<br>
+      <strong>No account. No cloud signup. Everything local.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2 -->
+<div class="step-row">
+  <div class="step-num"><div class="circle c2">2</div><div class="line"></div></div>
+  <div class="step-body">
+    <div class="step-title">Phone app (companion, not required) <span class="tag tag-p">Phone</span></div>
+    <div class="step-sub">Phone app is optional but recommended. It adds two things desktop alone can't do: location context and away-from-desk nudges.</div>
+    <div class="step-detail">
+      Connects to the desktop daemon over local WiFi (same network) — no cloud relay needed.<br>
+      Sends: location coarse signal (home/office/commuting), phone calendar events, any tasks added on mobile.<br>
+      Receives: nudges forwarded from desktop when user is away from desk.<br>
+      <strong>If no phone → desktop-only mode works fine. Just no mobile nudges.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Step 3 -->
+<div class="step-row">
+  <div class="step-num"><div class="circle c3">3</div><div class="line"></div></div>
+  <div class="step-body">
+    <div class="step-title">Runs silently for 1–2 weeks <span class="tag tag-b">Background</span></div>
+    <div class="step-sub">This is the cold start period. ARIA is watching but barely surfacing anything. It needs your patterns before it can predict them.</div>
+    <div class="step-detail">
+      Daemon runs a 15-min check loop. Reads calendar, notes folder, ActivityWatch logs.<br>
+      Builds the episodic memory store (what happened, when).<br>
+      Starts fitting the temporal rhythm model from day 5 onward.<br>
+      <strong>User sees almost nothing during this phase — that's intentional and should be communicated on install.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Step 4 -->
+<div class="step-row">
+  <div class="step-num"><div class="circle c4">4</div><div class="line"></div></div>
+  <div class="step-body">
+    <div class="step-title">System tray popup — primary surface <span class="tag tag-d">Desktop</span></div>
+    <div class="step-sub">After cold start, nudges begin appearing as a small floating card anchored to the system tray icon. This is the main interaction point.</div>
+    <div class="step-detail">
+      Card appears bottom-right (or wherever OS puts tray notifications).<br>
+      Shows: what + why + one-tap actions (Start / Snooze 30m / Dismiss).<br>
+      Auto-dismisses after 12 seconds if ignored — logs "ignored" as feedback signal.<br>
+      Card does NOT interrupt if: fullscreen app is open, microphone is active (you're in a call), or last nudge was &lt;45 min ago.<br>
+      <strong>Clicking the tray icon at any time opens the dashboard.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Step 5 -->
+<div class="step-row">
+  <div class="step-num"><div class="circle c5">5</div><div class="line"></div></div>
+  <div class="step-body">
+    <div class="step-title">Dashboard — on demand only <span class="tag tag-d">Desktop</span></div>
+    <div class="step-sub">User opens dashboard by clicking tray icon. It's a local browser page (localhost:7860). Not meant to be checked constantly — more like a weekly review surface.</div>
+    <div class="step-detail">
+      Today view: what nudges fired, what was accepted/dismissed, current focus state.<br>
+      Patterns tab: visual of the learned rhythm (the GNN graph from earlier).<br>
+      Settings: focus hours, nudge intensity, which data sources are connected, memory scope.<br>
+      Feedback tab: correct ARIA where it was wrong ("this was not urgent").<br>
+      <strong>No mobile dashboard — keep it simple. Phone is just for nudge delivery when away from desk.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Step 6 -->
+<div class="step-row">
+  <div class="step-num"><div class="circle c6">6</div></div>
+  <div class="step-body">
+    <div class="step-title">Gets smarter over time <span class="tag tag-b">Background</span></div>
+    <div class="step-sub">Every accept/snooze/dismiss feeds back into urgency weights. Every week the GNN retrains on accumulated data. After 4–6 weeks it's calibrated to this specific user.</div>
+    <div class="step-detail">
+      Nightly job (2am): re-trains rhythm model on last 30 days of activity logs.<br>
+      Weekly: re-summarizes semantic memory (compresses old episodic events into facts).<br>
+      User never sees or triggers this — it just gets quieter and more accurate over time.
+    </div>
+  </div>
+</div>

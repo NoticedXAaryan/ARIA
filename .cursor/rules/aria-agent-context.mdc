@@ -1,0 +1,16 @@
+---
+description: ARIA project context and execution priorities
+alwaysApply: true
+---
+
+# ARIA Agent Context
+
+- Read first: `AGENTS.md`, `ARIA_WORKFLOW_CHECKLIST.md`, `ARIA_PRD.md`.
+- Prioritize unchecked items in `ARIA_WORKFLOW_CHECKLIST.md` over new features.
+- Keep changes privacy-first and local-first; avoid paid dependencies.
+- Treat tray popup UX and interrupt gating as core product behavior.
+- When making implementation changes, run:
+  - `pytest aria-backend/tests -q`
+  - `cd aria-desktop && npm run build`
+  - `cd aria-mobile && npx expo export --platform android --output-dir dist-test`
+- If behavior differs from PRD, align to PRD and document the adjustment.
