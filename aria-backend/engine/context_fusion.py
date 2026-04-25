@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import time
+import logging
 from typing import Any
 
 from engine.behavior_model import BehaviorModel
 from storage.db import DB
+
+logger = logging.getLogger(__name__)
 
 
 def build_context(db: DB, behavior_model: BehaviorModel | None = None) -> dict[str, Any]:
@@ -57,5 +60,6 @@ def _is_unread(email_row: dict) -> bool:
         if isinstance(meta, str):
             meta = json.loads(meta)
         return meta.get("is_unread", False)
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed to parse email metadata_json: %s", exc)
         return False

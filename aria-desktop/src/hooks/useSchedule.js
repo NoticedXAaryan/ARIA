@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { API } from "../lib/api";
 
 export function useSchedule() {
   return useQuery({
     queryKey: ["schedule"],
     queryFn: async () => {
-      const res = await fetch("http://127.0.0.1:8742/api/schedule/today");
+      const res = await fetch(`${API}/api/schedule/today`);
       return res.json();
     },
     refetchInterval: 60000

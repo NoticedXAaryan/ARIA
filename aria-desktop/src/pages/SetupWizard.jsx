@@ -7,8 +7,7 @@ import {
   AlertCircle, Zap, Shield, Brain, Rocket, Key,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
+import { API } from "../lib/api";
 
 const STEPS = [
   { id: "welcome", title: "Welcome", icon: Sparkles },
@@ -96,10 +95,22 @@ function GoogleStep({ config, setConfig }) {
   const handleLink = async () => {
     setLinking(true); setStatus("linking");
     try {
-      const resp = await fetch(`${API}/api/setup/google/init`);
+      const resp = await fetch(`${API}/api/accounts/google/start`, { method: "POST" });
       if (resp.ok) {
         const data = await resp.json();
-        if (data.linked) { setStatus("linked"); setConfig(c => ({ ...c, googleLinked: true })); setLinking(false); return; }
+        if (data?.auth_url) {
+          window.open(data.auth_url, "_blank", "noopener,noreferrer");
+        }
+        const statusResp = await fetch(`${API}/api/setup/status`);
+        if (statusResp.ok) {
+          const statusData = await statusResp.json();
+          if (statusData.google_linked) {
+            setStatus("linked");
+            setConfig((c) => ({ ...c, googleLinked: true }));
+            setLinking(false);
+            return;
+          }
+        }
       }
       setStatus("error");
     } catch { setStatus("error"); }
@@ -296,7 +307,7 @@ export default function SetupWizard() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ width: "100%", maxWidth: 500, padding: "0 20px", zIndex: 10 }}>
         <StepIndicator currentStep={step} />
         <div className="glass-strong glow-accent" style={{ borderRadius: 20, padding: "28px 28px 20px" }}>
-          {/* Progress bar */}
+          {/* ProgressBar bar */}
           <div style={{ height: 4, borderRadius: 2, background: "var(--aria-surface-2)", marginBottom: 24, overflow: "hidden" }}>
             <motion.div animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }} style={{ height: "100%", borderRadius: 2, background: "linear-gradient(90deg, var(--aria-gradient-start), var(--aria-gradient-end))" }} transition={{ duration: 0.4 }} />
           </div>

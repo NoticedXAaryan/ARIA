@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardBody, Button, Progress, Input } from "@heroui/react";
+import { Card, CardContent, Button, ProgressBar, Input } from "@heroui/react";
 import { CheckCircle2, ChevronRight, Folder, Calendar, Sparkles } from "lucide-react";
-
-const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
+import { API } from "../lib/api";
 
 export default function OnboardingWizard({ onComplete }) {
   const [step, setStep] = useState(1);
@@ -22,9 +21,9 @@ export default function OnboardingWizard({ onComplete }) {
     if (step === 2 && googleStatus === "polling") {
       const iv = setInterval(async () => {
         try {
-          const res = await fetch(`${API}/api/setup/google/status`);
+          const res = await fetch(`${API}/api/setup/status`);
           const data = await res.json();
-          if (data.linked) {
+          if (data.google_linked) {
             setGoogleStatus("success");
             clearInterval(iv);
           }
@@ -39,11 +38,13 @@ export default function OnboardingWizard({ onComplete }) {
   const connectGoogle = async () => {
     try {
       setGoogleStatus("polling");
-      // Actually triggering the init flow, which returns a status
-      const res = await fetch(`${API}/api/setup/google/init`);
+      const res = await fetch(`${API}/api/accounts/google/start`, { method: "POST" });
+      if (!res.ok) {
+        throw new Error(`google start failed: ${res.status}`);
+      }
       const data = await res.json();
-      if (data.status === "already_linked" || data.linked) {
-         setGoogleStatus("success");
+      if (data?.auth_url) {
+        window.open(data.auth_url, "_blank", "noopener,noreferrer");
       }
     } catch (e) {
       console.error(e);
@@ -111,10 +112,10 @@ export default function OnboardingWizard({ onComplete }) {
     }}>
       <div style={{ width: 500, maxWidth: "90%", position: "relative" }}>
         
-        {/* Progress */}
+        {/* ProgressBar */}
         <div style={{ marginBottom: 30, display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <Progress value={(step / totalSteps) * 100} size="sm" color="secondary" />
+            <ProgressBar value={(step / totalSteps) * 100} size="sm" color="secondary" />
           </div>
           <span style={{ fontSize: 12, color: "var(--aria-text-muted)", fontWeight: 600 }}>{step} / {totalSteps}</span>
         </div>

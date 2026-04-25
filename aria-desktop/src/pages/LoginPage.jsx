@@ -229,7 +229,7 @@ export default function LoginPage() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Divider */}
+          {/* Separator */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
             <div style={{ flex: 1, height: 1, background: "var(--aria-border)" }} />
             <span style={{ fontSize: 12, color: "var(--aria-text-muted)", whiteSpace: "nowrap" }}>or continue with</span>

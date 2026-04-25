@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any
 
 import requests
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 
 from connectors.account_manager import AccountManager
 from connectors.whatsapp import WhatsAppConnector
@@ -35,9 +36,11 @@ app.add_middleware(
 )
 
 behavior_model = BehaviorModel()
+logger = logging.getLogger(__name__)
 try:
     memory_store = MemoryStore()
-except Exception:
+except Exception as exc:
+    logger.exception("MemoryStore initialization failed: %s", exc)
     memory_store = None
 ws_clients: set[WebSocket] = set()
 
@@ -51,7 +54,7 @@ class AuthCodePayload(BaseModel):
     code: str
 
 class TaskPayload(BaseModel):
-    title: str
+    title: constr(strip_whitespace=True, min_length=1, max_length=256)
 
 
 class SettingsPayload(BaseModel):
@@ -118,9 +121,9 @@ class PairVerifyPayload(BaseModel):
     token: str
 
 class PairRegisterPayload(BaseModel):
-    device_id: str
-    push_token: str
-    platform: str
+    device_id: constr(strip_whitespace=True, min_length=1, max_length=128)
+    push_token: constr(strip_whitespace=True, min_length=1, max_length=1024)
+    platform: constr(strip_whitespace=True, min_length=1, max_length=32)
 
 
 # ─── Status & Core Endpoints ───
@@ -128,6 +131,12 @@ class PairRegisterPayload(BaseModel):
 @app.get("/api/health")
 def health() -> list[dict]:
     return db.get_all_connector_health()
+
+
+@app.get("/health")
+def health_legacy() -> dict[str, str]:
+    """Legacy health route used by older desktop builds."""
+    return {"status": "ok"}
 
 @app.get("/api/status")
 def status() -> dict:
@@ -166,7 +175,9 @@ def nudges_history(page: int = 1) -> dict:
 def nudge_feedback(nudge_id: int, payload: FeedbackPayload) -> dict:
     if payload.outcome not in {"accepted", "dismissed", "snoozed", "ignored", "expired"}:
         raise HTTPException(status_code=400, detail="invalid outcome")
-    db.update_nudge_feedback(nudge_id=nudge_id, outcome=payload.outcome)
+    updated = db.update_nudge_feedback(nudge_id=nudge_id, outcome=payload.outcome)
+    if not updated:
+        raise HTTPException(status_code=404, detail="nudge not found")
     return {"ok": True}
 
 
@@ -332,7 +343,7 @@ def memory_clear() -> dict:
 
 @app.post("/api/tasks")
 def add_task(payload: TaskPayload) -> dict:
-    task_id = db.add_task(payload.title.strip())
+    task_id = db.add_task(payload.title)
     return {"id": task_id}
 
 
@@ -344,6 +355,8 @@ def get_settings() -> dict:
 @app.put("/api/settings")
 @app.patch("/api/settings")
 def put_settings(payload: SettingsPayload) -> dict:
+    if not payload.updates:
+        raise HTTPException(status_code=400, detail="updates must not be empty")
     db.update_settings(payload.updates)
     # If OpenRouter key was updated, set it in env for the urgency engine
     if "openrouter_api_key" in payload.updates:
@@ -577,23 +590,15 @@ def pair_generate_code():
 def pair_verify(payload: PairVerifyPayload):
     import time as _t, socket
     now = int(_t.time())
-    with db.connect() as conn:
-        row = conn.execute(
-            "SELECT * FROM pair_codes WHERE code = ? AND expires_at > ? AND used = 0",
-            (payload.token, now)
-        ).fetchone()
-    if not row:
+    if not db.mark_pair_code_used(payload.token, now_ts=now):
         return {"success": False, "error": "Invalid or expired code"}
-    # Mark as used
-    with db.connect() as conn:
-        conn.execute("UPDATE pair_codes SET used = 1 WHERE code = ?", (payload.token,))
-        conn.commit()
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
         s.close()
-    except Exception:
+    except Exception as exc:
+        logger.warning("Falling back to loopback IP for pairing: %s", exc)
         local_ip = "127.0.0.1"
     return {"success": True, "desktop_ip": local_ip, "port": 8742}
 
@@ -629,7 +634,13 @@ async def nudges_socket(ws: WebSocket) -> None:
                 data = message.get("data", {})
                 nudge_id = int(data.get("id"))
                 outcome = str(data.get("outcome"))
-                db.update_nudge_feedback(nudge_id=nudge_id, outcome=outcome)
+                if outcome not in {"accepted", "dismissed", "snoozed", "ignored", "expired"}:
+                    await ws.send_json({"event": "error", "data": {"detail": "invalid outcome"}})
+                    continue
+                updated = db.update_nudge_feedback(nudge_id=nudge_id, outcome=outcome)
+                if not updated:
+                    await ws.send_json({"event": "error", "data": {"detail": "nudge not found"}})
+                    continue
                 await ws.send_json({"event": "ack", "data": {"id": nudge_id}})
     except WebSocketDisconnect:
         ws_clients.discard(ws)

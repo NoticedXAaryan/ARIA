@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardBody, ButtonGroup, Button, Spinner } from "@heroui/react";
+import { Card, CardContent, ButtonGroup, Button, Spinner } from "@heroui/react";
 import { BarChart3, Target, CheckCircle2, Database } from "lucide-react";
 
 const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
@@ -160,9 +160,9 @@ export default function PatternsTab() {
 
       {/* Chart */}
       <Card className="glass" style={{ border: "1px solid var(--aria-border)", marginBottom: 16 }}>
-        <CardBody style={{ padding: 12 }}>
+        <CardContent style={{ padding: 12 }}>
           <RhythmChart weights={dayWeights} />
-        </CardBody>
+        </CardContent>
       </Card>
 
       {/* Stats */}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  Card, CardBody, Button, Input, Textarea, Divider, Spinner, Chip
+  Card, CardContent, Button, Input, TextArea, Separator, Spinner, Chip
 } from "@heroui/react";
 import {
   Send, Calendar, StickyNote, Trash2, CheckCircle2, Sparkles
@@ -85,7 +85,7 @@ function EmailComposer({ context, onDone }) {
 
   return (
     <Card className="glass" style={{ border: "1px solid var(--aria-border)" }}>
-      <CardBody style={{ gap: 12, padding: 16 }}>
+      <CardContent style={{ gap: 12, padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <Send size={16} color="var(--aria-primary)" />
           <span style={{ fontSize: 14, fontWeight: 600 }}>Quick Reply</span>
@@ -111,7 +111,7 @@ function EmailComposer({ context, onDone }) {
 
         <Input size="sm" label="To" value={to} onValueChange={setTo} placeholder="recipient@example.com" />
         <Input size="sm" label="Subject" value={subject} onValueChange={setSubject} />
-        <Textarea
+        <TextArea
           size="sm"
           label="Body"
           value={body}
@@ -125,7 +125,7 @@ function EmailComposer({ context, onDone }) {
           <Button size="sm" variant="flat" onPress={onDone} startContent={<Trash2 size={14} />}>Discard</Button>
           <Button size="sm" color="primary" onPress={handleSend} isLoading={sending} startContent={<Send size={14} />}>Send</Button>
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -192,7 +192,7 @@ function EventPreview({ parsed, onConfirm, onDiscard }) {
 
   return (
     <Card className="glass" style={{ border: "1px solid var(--aria-border)" }}>
-      <CardBody style={{ gap: 12, padding: 16 }}>
+      <CardContent style={{ gap: 12, padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <Calendar size={16} color="var(--aria-secondary)" />
           <span style={{ fontSize: 14, fontWeight: 600 }}>New Event</span>
@@ -220,7 +220,7 @@ function EventPreview({ parsed, onConfirm, onDiscard }) {
           <Button size="sm" variant="flat" onPress={onDiscard} startContent={<Trash2 size={14} />}>Discard</Button>
           <Button size="sm" color="success" onPress={handleCreate} isLoading={creating} startContent={<Calendar size={14} />}>Create Event</Button>
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -265,13 +265,13 @@ function NotePreview({ parsed, onDiscard }) {
 
   return (
     <Card className="glass" style={{ border: "1px solid var(--aria-border)" }}>
-      <CardBody style={{ gap: 12, padding: 16 }}>
+      <CardContent style={{ gap: 12, padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <StickyNote size={16} color="var(--aria-accent)" />
           <span style={{ fontSize: 14, fontWeight: 600 }}>New Note</span>
         </div>
 
-        <Textarea
+        <TextArea
           size="sm"
           label="Content (Obsidian Markdown)"
           value={content}
@@ -284,7 +284,7 @@ function NotePreview({ parsed, onDiscard }) {
           <Button size="sm" variant="flat" onPress={onDiscard} startContent={<Trash2 size={14} />}>Discard</Button>
           <Button size="sm" color="success" onPress={handleSave} isLoading={saving} startContent={<StickyNote size={14} />}>Save Note</Button>
         </div>
-      </CardBody>
+      </CardContent>
     </Card>
   );
 }
@@ -366,7 +366,7 @@ export default function ActionsTab() {
             />
           </div>
 
-          <Divider style={{ marginBottom: 16 }} />
+          <Separator style={{ marginBottom: 16 }} />
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <p style={{ fontSize: 12, color: "var(--aria-text-muted)", marginBottom: 4 }}>Or start from scratch:</p>

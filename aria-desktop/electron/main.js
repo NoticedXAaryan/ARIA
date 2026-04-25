@@ -1,190 +1,48 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, dialog } = require("electron");
+const { app, BrowserWindow } = require("electron");
 const path = require("path");
-const { spawn } = require("child_process");
-const AutoLaunch = require("auto-launch");
 
-let tray;
-let dashboardWindow;
-let panelWindow;
-let toastWindow;
-let pythonProcess;
+let mainWindow;
+const RENDERER_URL = process.env.ELECTRON_RENDERER_URL || "http://localhost:5173";
 
-const ariaAutoLauncher = new AutoLaunch({
-  name: 'ARIA',
-  path: app.getPath('exe'),
-});
-
-function startPythonDaemon() {
-  const backendPath = path.join(__dirname, "../../aria-backend");
-  pythonProcess = spawn("python", ["main.py"], { cwd: backendPath });
-  
-  pythonProcess.stdout.on("data", (data) => console.log(`Python: ${data}`));
-  pythonProcess.stderr.on("data", (data) => console.error(`Python Error: ${data}`));
-  
-  pythonProcess.on("close", (code) => {
-    console.log(`Python process exited with code ${code}`);
-  });
-}
-
-function createDashboard() {
-  dashboardWindow = new BrowserWindow({
-    width: 1100,
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 380,
     height: 700,
+    frame: false,
+    alwaysOnTop: false,
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js")
-    }
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
-  dashboardWindow.loadURL("http://localhost:5173");
+
+  mainWindow.webContents.on("did-fail-load", () => {
+    const html = `
+      <html>
+        <body style="margin:0;display:grid;place-items:center;background:#0a0a0a;color:#fff;font-family:Arial,sans-serif;">
+          <div style="text-align:center;max-width:420px;padding:24px;">
+            <h2 style="margin:0 0 10px;">ARIA Desktop</h2>
+            <p style="margin:0 0 12px;color:#a3a3a3;">Renderer failed to load.</p>
+            <p style="margin:0;color:#a3a3a3;font-size:13px;">Start the UI dev server and retry. Expected URL: ${RENDERER_URL}</p>
+          </div>
+        </body>
+      </html>
+    `;
+    mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  });
+
+  mainWindow.loadURL(RENDERER_URL);
+  mainWindow.once("ready-to-show", () => mainWindow.show());
 }
 
-function createPanel() {
-  const primary = screen.getPrimaryDisplay().workAreaSize;
-  panelWindow = new BrowserWindow({
-    width: 52,
-    height: primary.height,
-    x: primary.width - 52,
-    y: 0,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    hasShadow: false,
-    show: true,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js")
-    }
-  });
-  panelWindow.loadURL("http://localhost:5173/#/panel");
-}
+app.whenReady().then(createMainWindow);
 
-function createToast() {
-  const primary = screen.getPrimaryDisplay().workAreaSize;
-  toastWindow = new BrowserWindow({
-    width: 280,
-    height: 120, // Expands dynamically in React if needed
-    x: primary.width - 296, // 16px padding
-    y: primary.height - 200,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    alwaysOnTop: true,
-    level: "floating",
-    skipTaskbar: true,
-    hasShadow: false,
-    show: false,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js")
-    }
-  });
-  toastWindow.loadURL("http://localhost:5173/#/toast");
-}
-
-function createTray() {
-  const fallbackIcon = nativeImage.createEmpty();
-  tray = new Tray(fallbackIcon);
-  const menu = Menu.buildFromTemplate([
-    { label: "Open Dashboard", click: () => dashboardWindow.show() },
-    { label: "Pause for 1 hour", click: () => {} },
-    { label: "Quit ARIA", click: () => app.quit() }
-  ]);
-  tray.setToolTip("ARIA");
-  tray.setContextMenu(menu);
-  tray.on("click", () => dashboardWindow.show());
-}
-
-app.whenReady().then(() => {
-  startPythonDaemon();
-  createDashboard();
-  createPanel();
-  createToast();
-  createTray();
-  
-  // Auto-launch handling
-  ariaAutoLauncher.isEnabled().then((isEnabled) => {
-    // Default to on
-    if (!isEnabled) ariaAutoLauncher.enable();
-  }).catch((err) => console.error("AutoLaunch error", err));
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", () => {
-  if (pythonProcess) {
-    pythonProcess.kill();
-  }
-});
-
-ipcMain.on("panel:expand", () => {
-  const primary = screen.getPrimaryDisplay().workAreaSize;
-  panelWindow.setBounds({ x: primary.width - 300, y: 0, width: 300, height: primary.height });
-});
-
-ipcMain.on("panel:collapse", () => {
-  const primary = screen.getPrimaryDisplay().workAreaSize;
-  panelWindow.setBounds({ x: primary.width - 52, y: 0, width: 52, height: primary.height });
-});
-
-ipcMain.on("panel:toggle", (_event, isExpanded) => {
-  const primary = screen.getPrimaryDisplay().workAreaSize;
-  if (isExpanded) {
-    panelWindow.setBounds({ x: primary.width - 300, y: 0, width: 300, height: primary.height });
-  } else {
-    panelWindow.setBounds({ x: primary.width - 52, y: 0, width: 52, height: primary.height });
-  }
-});
-
-ipcMain.on("nudge:new", (_event, payload) => {
-  panelWindow.webContents.send("nudge:new", payload);
-});
-
-// Toast specific IPC
-ipcMain.on("toast:show", (_event, nudge) => {
-  // Check for fullscreen app suppression
-  // We use a simple bounds check here to determine if any window might be fullscreen
-  // Note: Electron's screen API doesn't have a direct 'isFullScreen' for other apps on Windows,
-  // but ARIA is meant to be proactive, so we can suppress if bounds are extremely large or just show it anyway.
-  // For now, we show the toast window.
-  toastWindow.showInactive();
-  toastWindow.webContents.send("toast:data", nudge);
-});
-
-ipcMain.on("toast:hide", () => {
-  toastWindow.hide();
-});
-
-ipcMain.on("toast:resize", (_event, height) => {
-  const primary = screen.getPrimaryDisplay().workAreaSize;
-  toastWindow.setBounds({
-    x: primary.width - 296,
-    y: primary.height - 80 - height, // keep it above taskbar dynamically
-    width: 280,
-    height: height
-  });
-});
-
-ipcMain.handle("dialog:selectFolder", async () => {
-  const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
-  if (result.canceled) return null;
-  return result.filePaths[0];
-});
-
-ipcMain.handle("system:check-update", async () => {
-  try {
-    const res = await fetch("https://api.github.com/repos/NoticedXAaryan/ARIA/releases/latest");
-    if (res.ok) {
-      const data = await res.json();
-      return data;
-    }
-  } catch (e) {
-    console.error("Update check failed", e);
-  }
-  return null;
-});
-
-ipcMain.on("system:toggle-auto-launch", (_event, enable) => {
-  if (enable) {
-    ariaAutoLauncher.enable();
-  } else {
-    ariaAutoLauncher.disable();
-  }
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
 });

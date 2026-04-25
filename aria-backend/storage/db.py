@@ -55,6 +55,7 @@ class DB:
                   urgency_score REAL NOT NULL,
                   context_json TEXT NOT NULL,
                   suggestion_text TEXT NOT NULL,
+                  reason TEXT,
                   surface TEXT,
                   outcome TEXT,
                   snoozed_until INTEGER,
@@ -63,6 +64,7 @@ class DB:
 
                 CREATE INDEX IF NOT EXISTS idx_nudge_log_generated_at ON nudge_log(generated_at);
                 CREATE INDEX IF NOT EXISTS idx_nudge_log_outcome ON nudge_log(outcome);
+                CREATE INDEX IF NOT EXISTS idx_nudge_log_active_lookup ON nudge_log(outcome, snoozed_until, generated_at);
 
                 CREATE TABLE IF NOT EXISTS settings (
                   key TEXT PRIMARY KEY,
@@ -164,6 +166,10 @@ class DB:
                     "INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)",
                     (key, json.dumps(value)),
                 )
+            # Backward-compatible migration for existing DBs created before `reason` existed.
+            cols = {row["name"] for row in conn.execute("PRAGMA table_info(nudge_log)")}
+            if "reason" not in cols:
+                conn.execute("ALTER TABLE nudge_log ADD COLUMN reason TEXT")
             conn.commit()
 
     def insert_events(self, events: Iterable[NormalizedEvent]) -> int:
@@ -242,6 +248,7 @@ class DB:
         urgency_score: float,
         context_json: str,
         suggestion_text: str,
+        reason: str | None = None,
         surface: str = "popup",
         outcome: str | None = None,
     ) -> int:
@@ -249,8 +256,8 @@ class DB:
             cur = conn.execute(
                 """
                 INSERT INTO nudge_log
-                (generated_at, delivered_at, urgency_score, context_json, suggestion_text, surface, outcome)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (generated_at, delivered_at, urgency_score, context_json, suggestion_text, reason, surface, outcome)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     int(time.time()),
@@ -258,6 +265,7 @@ class DB:
                     urgency_score,
                     context_json,
                     suggestion_text,
+                    reason,
                     surface,
                     outcome,
                 ),
@@ -292,13 +300,28 @@ class DB:
                 )
             )
 
-    def update_nudge_feedback(self, nudge_id: int, outcome: str) -> None:
+    def update_nudge_feedback(self, nudge_id: int, outcome: str) -> bool:
         with self.connect() as conn:
-            conn.execute(
+            cur = conn.execute(
                 "UPDATE nudge_log SET outcome = ? WHERE id = ?",
                 (outcome, nudge_id),
             )
             conn.commit()
+            return cur.rowcount > 0
+
+    def mark_pair_code_used(self, code: str, now_ts: int | None = None) -> bool:
+        now = now_ts if now_ts is not None else int(time.time())
+        with self.connect() as conn:
+            cur = conn.execute(
+                """
+                UPDATE pair_codes
+                SET used = 1
+                WHERE code = ? AND expires_at > ? AND used = 0
+                """,
+                (code, now),
+            )
+            conn.commit()
+            return cur.rowcount > 0
 
     def expire_queued_nudges(self, max_age_seconds: int = 14400) -> int:
         cutoff = int(time.time()) - max_age_seconds

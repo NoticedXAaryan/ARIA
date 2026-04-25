@@ -164,7 +164,7 @@ export default function NudgeToast() {
               </div>
             </div>
 
-            {/* Progress Bar */}
+            {/* ProgressBar Bar */}
             <motion.div
               initial={{ width: "100%" }}
               animate={{ width: "0%" }}

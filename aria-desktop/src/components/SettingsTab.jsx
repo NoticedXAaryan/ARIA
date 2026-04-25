@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Card, CardBody, Button, Switch, Slider, Input, Divider, Avatar, 
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Spinner
+  Card, CardContent, Button, Switch, Slider, Input, Separator, Avatar, 
+  Spinner
 } from "@heroui/react";
 import { 
   CheckCircle2, XCircle, Settings, Mail, Calendar, Trash2, Smartphone, MonitorPlay, Activity, Brain, Link as LinkIcon, AlertCircle, Download
@@ -18,8 +18,8 @@ export default function SettingsTab() {
   const [pairData, setPairData] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [hideUpdate, setHideUpdate] = useState(false);
-  const {isOpen, onOpen, onOpenChange} = useDisclosure();
-  const {isOpen: isPairOpen, onOpen: onPairOpen, onOpenChange: onPairChange} = useDisclosure();
+  const [isClearOpen, setIsClearOpen] = useState(false);
+  const [isPairOpen, setIsPairOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -124,7 +124,7 @@ export default function SettingsTab() {
       const res = await fetch(`${API}/api/pair/code`);
       if (res.ok) {
         setPairData(await res.json());
-        onPairOpen();
+        setIsPairOpen(true);
       }
     } catch (e) {
       console.error(e);
@@ -158,7 +158,7 @@ export default function SettingsTab() {
       <section style={{ marginBottom: 32 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Connected Accounts</h3>
         <Card className="glass" style={{ marginBottom: 16 }}>
-          <CardBody style={{ gap: 12, padding: 16 }}>
+          <CardContent style={{ gap: 12, padding: 16 }}>
             {accounts.length === 0 ? (
               <div style={{ textAlign: "center", padding: "16px 0" }}>
                 <p style={{ fontSize: 13, color: "var(--aria-text-muted)", marginBottom: 16 }}>Connect an account to let ARIA organize your events and tasks.</p>
@@ -196,7 +196,7 @@ export default function SettingsTab() {
                 </div>
               )})
             )}
-          </CardBody>
+          </CardContent>
         </Card>
         <div style={{ display: "flex", gap: 8 }}>
           <Button size="sm" color="secondary" variant="flat" onPress={addGoogleAccount} startContent={<Mail size={16} />}>Add Google</Button>
@@ -209,7 +209,7 @@ export default function SettingsTab() {
       <section style={{ marginBottom: 32 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Data Sources</h3>
         <Card className="glass">
-          <CardBody style={{ gap: 16, padding: 16 }}>
+          <CardContent style={{ gap: 16, padding: 16 }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Notes Folder</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -218,7 +218,7 @@ export default function SettingsTab() {
               </div>
             </div>
             
-            <Divider />
+            <Separator />
             
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -232,7 +232,7 @@ export default function SettingsTab() {
               )}
             </div>
 
-            <Divider />
+            <Separator />
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -241,7 +241,7 @@ export default function SettingsTab() {
               </div>
               <Button size="sm" variant="light" color="secondary" onPress={() => window.open("https://web.whatsapp.com", "_blank")}>Connect</Button>
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       </section>
 
@@ -249,7 +249,7 @@ export default function SettingsTab() {
       <section style={{ marginBottom: 32 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Behaviour</h3>
         <Card className="glass">
-          <CardBody style={{ gap: 20, padding: 16 }}>
+          <CardContent style={{ gap: 20, padding: 16 }}>
             <div style={{ display: "flex", gap: 16 }}>
               <Input type="time" label="Focus Start" size="sm" value={settings.focus_start || "09:00"} onChange={(e) => updateSetting("focus_start", e.target.value)} />
               <Input type="time" label="Focus End" size="sm" value={settings.focus_end || "12:00"} onChange={(e) => updateSetting("focus_end", e.target.value)} />
@@ -295,7 +295,7 @@ export default function SettingsTab() {
                 <Switch size="sm" color="secondary" isSelected={settings.eod_enabled !== "false"} onValueChange={(val) => updateSetting("eod_enabled", val ? "true" : "false")} />
               </div>
             </div>
-          </CardBody>
+          </CardContent>
         </Card>
       </section>
 
@@ -303,7 +303,7 @@ export default function SettingsTab() {
       <section style={{ marginBottom: 32 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>ARIA Memory</h3>
         <Card className="glass">
-          <CardBody style={{ gap: 16, padding: 16 }}>
+          <CardContent style={{ gap: 16, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <Brain size={18} color="var(--aria-primary)" />
               <span style={{ fontSize: 14, fontWeight: 500 }}>What ARIA knows</span>
@@ -322,10 +322,10 @@ export default function SettingsTab() {
                 <div style={{ fontSize: 11, color: "var(--aria-text-muted)" }}>HABITS</div>
               </div>
             </div>
-            <Button size="sm" color="danger" variant="flat" onPress={onOpen} fullWidth style={{ marginTop: 8 }}>
+            <Button size="sm" color="danger" variant="flat" onPress={() => setIsClearOpen(true)} fullWidth style={{ marginTop: 8 }}>
               Clear All Memory
             </Button>
-          </CardBody>
+          </CardContent>
         </Card>
       </section>
 
@@ -338,60 +338,54 @@ export default function SettingsTab() {
         </div>
       </section>
 
-      {/* Clear Memory Modal */}
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop="blur">
-        <ModalContent style={{ background: "var(--aria-bg-dark)", border: "1px solid var(--aria-border)" }}>
-          {(onClose) => (
-            <>
-              <ModalHeader style={{ color: "#ef4444" }}>Clear ARIA's Memory?</ModalHeader>
-              <ModalBody>
-                <p style={{ fontSize: 14 }}>
-                  This will permanently delete all events, facts, and habits ARIA has learned about you. It cannot be undone.
-                </p>
-                <p style={{ fontSize: 14, color: "var(--aria-text-muted)" }}>
-                  (OAuth connections and settings will not be affected.)
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>Cancel</Button>
-                <Button color="danger" onPress={() => clearMemory(onClose)}>Delete Everything</Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      {isClearOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000 }}>
+          <Card className="glass-strong" style={{ width: 420, maxWidth: "92vw", border: "1px solid var(--aria-border)" }}>
+            <CardContent style={{ padding: 16 }}>
+              <h4 style={{ color: "#ef4444", margin: 0, marginBottom: 8 }}>Clear ARIA&apos;s Memory?</h4>
+              <p style={{ fontSize: 14, marginBottom: 8 }}>
+                This will permanently delete all events, facts, and habits ARIA has learned about you. It cannot be undone.
+              </p>
+              <p style={{ fontSize: 14, color: "var(--aria-text-muted)", marginBottom: 16 }}>
+                (OAuth connections and settings will not be affected.)
+              </p>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                <Button variant="light" onPress={() => setIsClearOpen(false)}>Cancel</Button>
+                <Button color="danger" onPress={() => clearMemory(() => setIsClearOpen(false))}>Delete Everything</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-      {/* Pair Phone Modal */}
-      <Modal isOpen={isPairOpen} onOpenChange={onPairChange} backdrop="blur">
-        <ModalContent style={{ background: "var(--aria-bg-dark)", border: "1px solid var(--aria-border)" }}>
-          {(onClose) => (
-            <>
-              <ModalHeader>Pair Mobile App</ModalHeader>
-              <ModalBody style={{ textAlign: "center", paddingBottom: 20 }}>
-                <p style={{ fontSize: 14, color: "var(--aria-text-muted)", marginBottom: 16 }}>
-                  Enter this 6-digit code in the ARIA mobile app.
-                </p>
-                {pairData && (
-                  <>
-                    <div style={{ fontSize: 40, fontWeight: "800", letterSpacing: 8, color: "var(--aria-primary)", marginBottom: 16 }}>
-                      {pairData.code}
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--aria-text-muted)" }}>
-                      Desktop IP: {pairData.desktop_ip}
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--aria-warning)", marginTop: 8 }}>
-                      Expires in {Math.floor(pairData.expires_in / 60)} minutes
-                    </div>
-                  </>
-                )}
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="flat" onPress={onClose}>Close</Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      {isPairOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000 }}>
+          <Card className="glass-strong" style={{ width: 420, maxWidth: "92vw", border: "1px solid var(--aria-border)" }}>
+            <CardContent style={{ textAlign: "center", padding: 16 }}>
+              <h4 style={{ margin: 0, marginBottom: 12 }}>Pair Mobile App</h4>
+              <p style={{ fontSize: 14, color: "var(--aria-text-muted)", marginBottom: 16 }}>
+                Enter this 6-digit code in the ARIA mobile app.
+              </p>
+              {pairData && (
+                <>
+                  <div style={{ fontSize: 40, fontWeight: "800", letterSpacing: 8, color: "var(--aria-primary)", marginBottom: 16 }}>
+                    {pairData.code}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--aria-text-muted)" }}>
+                    Desktop IP: {pairData.desktop_ip}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--aria-warning)", marginTop: 8, marginBottom: 16 }}>
+                    Expires in {Math.floor(pairData.expires_in / 60)} minutes
+                  </div>
+                </>
+              )}
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Button variant="flat" onPress={() => setIsPairOpen(false)}>Close</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
     </div>
   );

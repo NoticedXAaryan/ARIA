@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardBody, Chip, Spinner } from "@heroui/react";
+import { Card, CardContent, Chip, Spinner } from "@heroui/react";
 import { Clock, Users, ExternalLink, Sparkles, Timer } from "lucide-react";
 
 const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
@@ -50,7 +50,7 @@ function TimelineEvent({ event }) {
 
       {/* Event card */}
       <Card className="glass" style={{ flex: 1, border: "1px solid var(--aria-border)", marginBottom: 4 }}>
-        <CardBody style={{ padding: 12 }}>
+        <CardContent style={{ padding: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
             <h4 style={{ fontSize: 13, fontWeight: 500, margin: 0, flex: 1, lineHeight: 1.4 }}>{event.title || "Untitled"}</h4>
             <Chip size="sm" color={chip.color} variant="flat">{chip.label}</Chip>
@@ -71,7 +71,7 @@ function TimelineEvent({ event }) {
               </a>
             )}
           </div>
-        </CardBody>
+        </CardContent>
       </Card>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardHeader, CardBody, Button, Badge, Chip, Progress, Tabs, Tab, Divider } from "@heroui/react";
+import { Card, CardHeader, CardContent, Button, Badge, Chip, ProgressBar, Tabs, Tab, Separator } from "@heroui/react";
 import { Sparkles, X, Timer, CheckCircle2, ChevronLeft, ArrowUpRight, Reply } from "lucide-react";
 import { usePanelStore } from "../store/panelStore";
 import ActionsTab from "./ActionsTab";
@@ -45,8 +45,8 @@ function NudgeToast({ nudge, onAction, onExpand }) {
     >
       <Card className="glass-strong" style={{ border: "1px solid var(--aria-border)" }}>
         <div style={{ position: "relative", cursor: "pointer" }} onClick={onExpand}>
-          <Progress size="sm" value={progress} color="secondary" style={{ position: "absolute", top: 0, left: 0, right: 0 }} aria-label="Countdown" />
-          <CardBody style={{ padding: 16, paddingTop: 20 }}>
+          <ProgressBar size="sm" value={progress} color="secondary" style={{ position: "absolute", top: 0, left: 0, right: 0 }} aria-label="Countdown" />
+          <CardContent style={{ padding: 16, paddingTop: 20 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--aria-warning)", marginTop: 6 }} />
               <div style={{ flex: 1 }}>
@@ -54,7 +54,7 @@ function NudgeToast({ nudge, onAction, onExpand }) {
                 <p style={{ fontSize: 12, color: "var(--aria-text-muted)" }}>{nudge.reason || "Suggested based on your current context"}</p>
               </div>
             </div>
-          </CardBody>
+          </CardContent>
         </div>
         <div style={{ display: "flex", gap: 8, padding: "0 16px 16px 16px" }}>
           <Button size="sm" color="success" variant="flat" onPress={() => onAction(nudge.id, "accepted")} startContent={<CheckCircle2 size={14} />}>Accept</Button>
@@ -79,7 +79,7 @@ function PanelNudgeCard({ nudge, onAction, onReply }) {
   return (
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, scale: 0.95, height: 0 }} transition={{ duration: 0.2 }}>
       <Card className="glass" style={{ marginBottom: 12, border: "1px solid var(--aria-border)" }}>
-        <CardBody style={{ padding: 16 }}>
+        <CardContent style={{ padding: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
             <h4 style={{ fontSize: 14, fontWeight: 500, margin: 0, flex: 1 }}>{nudge.text}</h4>
             <Badge color={urgencyColor} variant="flat" size="sm">{urgencyLabel}</Badge>
@@ -93,7 +93,7 @@ function PanelNudgeCard({ nudge, onAction, onReply }) {
             <Button size="sm" variant="flat" onPress={() => onAction(nudge.id, "snoozed")}>Snooze 30m</Button>
             <Button size="sm" variant="light" isIconOnly onPress={() => onAction(nudge.id, "dismissed")}><X size={16} /></Button>
           </div>
-        </CardBody>
+        </CardContent>
       </Card>
     </motion.div>
   );
@@ -169,7 +169,7 @@ export default function SidePanel() {
   };
 
   const openDashboard = () => {
-    window.open("http://localhost:5173", "_blank");
+    window.open(window.location.origin, "_blank");
   };
 
   if (!isExpanded) {
@@ -264,14 +264,14 @@ export default function SidePanel() {
         </Tabs>
       </div>
 
-      {/* First Week Experience Progress Bar */}
+      {/* First Week Experience ProgressBar Bar */}
       {status?.days_active < 7 && (
         <div style={{ padding: "8px 16px", background: "rgba(59, 130, 246, 0.1)", borderBottom: "1px solid rgba(59, 130, 246, 0.2)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6" }}>ARIA is learning</span>
             <span style={{ fontSize: 11, color: "var(--aria-text-muted)" }}>Day {status.days_active || 1} of 7</span>
           </div>
-          <Progress size="sm" value={((status.days_active || 1) / 7) * 100} color="primary" />
+          <ProgressBar size="sm" value={((status.days_active || 1) / 7) * 100} color="primary" />
         </div>
       )}
       
@@ -302,7 +302,7 @@ export default function SidePanel() {
               </AnimatePresence>
             </div>
             
-            <Divider />
+            <Separator />
             
             <div style={{ padding: "16px" }}>
               <div 

@@ -4,9 +4,10 @@
   "private": true,
   "main": "electron/main.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "vite build",
-    "electron": "electron ."
+    "electron": "electron .",
+    "dev:electron": "concurrently \"npm run dev\" \"wait-on tcp:5173 && electron .\""
   },
   "dependencies": {
     "@heroui/react": "^3.0.3",
@@ -26,7 +27,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
     "electron": "^30.5.1",
-    "vite": "^8.0.10"
+    "electron-builder": "^26.0.12",
+    "vite": "^8.0.10",
+    "wait-on": "^9.0.1"
   }
 }
