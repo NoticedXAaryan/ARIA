@@ -10,10 +10,20 @@ import requests
 
 from storage.db import DB
 from storage.models import NudgeCandidate
+from engine.feedback_weights import FeedbackWeightManager
 
 logger = logging.getLogger(__name__)
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+_feedback_manager = None
+
+def get_feedback_manager(db: DB | None) -> FeedbackWeightManager:
+    global _feedback_manager
+    if _feedback_manager is None:
+        db_path = db.db_path if db else None
+        _feedback_manager = FeedbackWeightManager(db_path)
+    return _feedback_manager
 
 
 def _note_matches_meeting(meeting_title: str, note_rows: list[dict[str, Any]]) -> bool:
@@ -227,6 +237,17 @@ def evaluate_context(context: dict[str, Any], db: DB | None = None) -> list[Nudg
                     context={"meeting_count": upcoming_meetings},
                 )
             )
+
+    # Apply feedback weights
+    fm = get_feedback_manager(db)
+    now_tm = time.localtime(now)
+    current_hour = now_tm.tm_hour
+    current_day = now_tm.tm_wday
+    current_workload = "high" if context.get("calendar_load_next_2h", 0) >= 3 else "normal"
+
+    for candidate in candidates:
+        weight = fm.get_weight(candidate.reason, current_hour, current_day, current_workload)
+        candidate.urgency_score = candidate.urgency_score * weight
 
     return candidates
 
