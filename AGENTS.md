@@ -12,11 +12,12 @@ Build ARIA into a proactive, local-first assistant that:
 
 ## Source of Truth (Read in this order)
 
-1. `ARIA_PRD.md` - full requirements and architecture contract.
-2. `ARIA_WORKFLOW_CHECKLIST.md` - current implementation and test status.
-3. `projectDiscription.md` - product framing, interfaces, UX behavior.
-4. `README.md` - quick start and commands.
-5. `docs/api-reference.md`, `docs/architecture.md`, `docs/setup-guide.md`.
+1. `ARIA_PRD.md` — full requirements and architecture contract.
+2. `ARIA_WORKFLOW_CHECKLIST.md` — current implementation status, phase-by-phase.
+3. `README.md` — orientation, quick start, documentation map.
+4. `docs/architecture.md` — system architecture with file-to-layer mapping.
+5. `docs/api-reference.md` — REST + WebSocket endpoint schemas.
+6. `docs/setup-guide.md` — full installation walkthrough.
 
 ## Current Scope (v1)
 
@@ -25,16 +26,6 @@ Build ARIA into a proactive, local-first assistant that:
 - Dashboard for review/settings.
 - Mobile companion for away-from-desk actions (optional).
 - Privacy-first: mostly on-device, no paid dependency requirement.
-
-## What Is Already Implemented
-
-- Backend scaffold: connectors, storage, engine, scheduler, API.
-- SQLite schema + nudge logging + settings + tasks.
-- Basic behavior model and memory scaffolding.
-- Desktop and mobile app scaffolds.
-- Basic backend tests and build checks.
-
-Check exact done/partial/pending status in `ARIA_WORKFLOW_CHECKLIST.md`.
 
 ## Default Working Loop for Agents
 

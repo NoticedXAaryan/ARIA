@@ -1,24 +1,48 @@
 # ARIA Step-by-Step Workflow and Test Checklist
 
-This checklist is aligned to `ARIA_PRD.md` and your current implementation state.  
+This checklist is aligned to `ARIA_PRD.md` and the current implementation state.
 Use it as the single execution tracker while building and validating ARIA end-to-end.
 
 Status legend:
-- [x] Done (already implemented and verified)
-- [~] Partial (implemented but needs PRD alignment hardening)
+- [x] Done (implemented and verified)
+- [~] Partial (implemented but needs PRD alignment or hardening)
 - [ ] Pending (not implemented yet)
 
 ---
 
-## 0) Current Project Snapshot (Already Present)
+## 0) Current Project Snapshot
+
+### Objective
+
+Ship a working proactive assistant that users install once and mostly forget, while receiving useful, low-noise nudges in the tray at the right moment.
+
+### Maturity Summary
+
+| Layer | Status | Details |
+|---|---|---|
+| **Backend daemon** | ✅ Foundational | Ingestion, scheduler, API, urgency path, context fusion with behavior model |
+| **Storage** | ✅ Working | SQLite schema, ChromaDB memory, all CRUD operations |
+| **Desktop app** | ⚠️ Scaffold | Electron + React builds, core UX partially implemented |
+| **Mobile app** | ⚠️ Scaffold | Expo app builds/exports, pairing and deep sync partial |
+| **Testing** | ⚠️ Basic | Baseline tests exist; advanced behavior/queue/fallback tests missing |
+
+### Definition of Done (v1)
+
+- ARIA can ingest real daily signals and generate context-aware nudges.
+- Nudges are suppressed during bad interruption windows and re-surfaced later.
+- User feedback measurably changes future urgency decisions.
+- Desktop experience feels quiet, useful, and stable.
+- No paid services are required for core operation.
 
 ### Backend (`aria-backend`)
-- [x] Project scaffold exists (`connectors`, `engine`, `storage`, scheduler, API entry)
+- [x] Project scaffold exists (`connectors`, `engine`, `storage`, scheduler, API)
 - [x] SQLite schema and helpers exist in `storage/db.py`
-- [x] Core API endpoints exist in `api_main.py`
+- [x] Core API endpoints exist in `api_main.py` (with CORS for mobile)
 - [x] Rule-based context + urgency + interrupt gate exist
 - [x] Basic behavior model exists (Markov-style transition table + state classification)
 - [x] Memory store wrapper exists (`storage/memory.py`)
+- [x] Context fusion includes behavior model predictions and cognitive state
+- [x] Scheduler uses behavior model for cognitive state classification
 - [x] Pytest suite exists (4 tests currently)
 - [~] Queue + expiry + fallback and full PRD NFR details need hardening
 
@@ -31,7 +55,7 @@ Status legend:
 ### Mobile (`aria-mobile`)
 - [x] Expo app and screens exist (`index`, `tasks`, `settings`)
 - [x] Android export now succeeds (`npx expo export --platform android --output-dir dist-test`)
-- [x] Missing Expo runtime deps fixed (`expo-status-bar`, `react-native-safe-area-context`, `react-native-screens`, `react-native-gesture-handler`, `expo-linking`, `expo-constants`)
+- [x] Missing Expo runtime deps fixed
 - [~] PRD LAN sync/pairing depth still needs completion and full interaction parity
 
 ---
@@ -56,7 +80,7 @@ Status legend:
 
 ## 2) Phase-by-Phase Delivery Workflow (PRD Aligned)
 
-## Phase 1 - Data Pipeline
+## Phase 1 — Data Pipeline `[DONE]`
 
 ### Build tasks
 - [x] SQLite schema and event ingestion plumbing
@@ -73,17 +97,17 @@ Status legend:
 
 ---
 
-## Phase 2 - Rule-Based Nudges
+## Phase 2 — Rule-Based Nudges `[DONE]`
 
 ### Build tasks
-- [x] Context fusion module present
+- [x] Context fusion module present (includes behavior model + cognitive state)
 - [x] Rule-based urgency generation present
 - [x] Nudge persistence to `nudge_log` present
 - [~] Expand rules to exactly match PRD (meeting-prep, load-aware thresholds, richer outcome handling)
 - [ ] Add robust nudge queue state transitions
 
 ### Tests for this phase
-- [x] Existing urgency test (basic candidate generation)
+- [~] Existing urgency test (basic candidate generation — uses far-future timestamp, needs realistic test)
 - [ ] Add tests for: meeting <30 min + no prep note -> nudge generated
 - [ ] Add tests for: prep note exists -> no nudge
 - [ ] Add tests for high-load threshold behavior
@@ -91,7 +115,7 @@ Status legend:
 
 ---
 
-## Phase 3 - Memory Layer
+## Phase 3 — Memory Layer `[PARTIAL]`
 
 ### Build tasks
 - [x] Chroma-based memory wrapper exists
@@ -108,10 +132,11 @@ Status legend:
 
 ---
 
-## Phase 4 - Behavior Model
+## Phase 4 — Behavior Model `[PARTIAL]`
 
 ### Build tasks
 - [x] Initial Markov-style model scaffold present
+- [x] Cognitive state classifier implemented (deep_focus / flow / normal / overloaded)
 - [~] Upgrade to PRD-required `(hour_bucket, day_of_week) -> next_activity_type` training from enough history
 - [ ] Add weekly retrain workflow over recent window
 - [ ] Add data sufficiency gating for optional GNN upgrade
@@ -125,7 +150,7 @@ Status legend:
 
 ---
 
-## Phase 5 - LLM Suggestions + Interrupt Gate
+## Phase 5 — LLM Suggestions + Interrupt Gate `[PARTIAL]`
 
 ### Build tasks
 - [x] Interrupt gate logic exists
@@ -144,7 +169,7 @@ Status legend:
 
 ---
 
-## Phase 6 - Desktop App Finish
+## Phase 6 — Desktop App Finish `[PARTIAL]`
 
 ### Build tasks
 - [x] Electron + React shell and components present
@@ -162,7 +187,7 @@ Status legend:
 
 ---
 
-## Phase 7 - Mobile Companion Finish
+## Phase 7 — Mobile Companion Finish `[PARTIAL]`
 
 ### Build tasks
 - [x] Expo app scaffolding and screens exist
@@ -192,20 +217,23 @@ Status legend:
 
 ## 4) Recommended Command Workflow (Repeat Every Iteration)
 
-- [ ] `cd aria-backend && pytest -q`
-- [ ] `cd aria-desktop && npm run build`
-- [ ] `cd aria-mobile && npx expo export --platform android --output-dir dist-test`
-- [ ] Start backend and manually validate API + websocket flows
-- [ ] Trigger one full scheduler cycle and validate DB + UI effects
-- [ ] Update this checklist by ticking completed items each session
+```bash
+cd aria-backend && pytest -q
+cd aria-desktop && npm run build
+cd aria-mobile && npx expo export --platform android --output-dir dist-test
+```
+
+Then:
+- Start backend and manually validate API + websocket flows
+- Trigger one full scheduler cycle and validate DB + UI effects
+- Update this checklist by ticking completed items each session
 
 ---
 
 ## 5) Immediate Next Actions (Suggested Order)
 
-- [ ] Add missing backend tests for queue/retry/fallback paths first
-- [ ] Implement PRD queue lifecycle (blocked -> queued -> re-eval -> expired)
-- [ ] Complete desktop popup action parity (countdown + snooze matrix + ignored logging)
-- [ ] Complete mobile desktop pairing and bidirectional feedback sync
-- [ ] Add one CI workflow that executes all three verification commands automatically
-
+1. [ ] Add missing backend tests for queue/retry/fallback paths first
+2. [ ] Implement PRD queue lifecycle (blocked -> queued -> re-eval -> expired)
+3. [ ] Complete desktop popup action parity (countdown + snooze matrix + ignored logging)
+4. [ ] Complete mobile desktop pairing and bidirectional feedback sync
+5. [ ] Add one CI workflow that executes all three verification commands automatically

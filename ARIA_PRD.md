@@ -437,37 +437,35 @@ Screen 3 — Settings
 aria/
 ├── aria-backend/                    # Python daemon
 │   ├── connectors/
+│   │   ├── __init__.py
 │   │   ├── google_calendar.py       # OAuth2, pulls next 7 days of events
 │   │   ├── activity_watcher.py      # Reads ActivityWatch REST API at localhost:5600
-│   │   └── notes_watcher.py         # watchdog on configured notes folder
+│   │   └── notes_watcher.py         # Polls configured notes folder for changes
 │   ├── storage/
-│   │   ├── db.py                    # SQLite schema + query helpers
-│   │   ├── memory.py                # ChromaDB interface (embed, store, query)
-│   │   └── models.py                # Python dataclasses for all data types
+│   │   ├── __init__.py
+│   │   ├── db.py                    # SQLite schema + query helpers (events, nudge_log, habits, settings, tasks)
+│   │   ├── memory.py                # ChromaDB interface (embed with all-MiniLM-L6-v2, store, query)
+│   │   └── models.py                # NormalizedEvent + NudgeCandidate dataclasses
 │   ├── engine/
-│   │   ├── behavior_model.py        # Markov chain (v1) → GNN (v2) temporal model
-│   │   ├── context_fusion.py        # Merges all signals into unified context object
-│   │   ├── urgency_engine.py        # Scoring formula + LLM call to OpenRouter
-│   │   └── interrupt_gate.py        # Blocks/queues based on cognitive state
-│   ├── api/
-│   │   ├── main.py                  # FastAPI app + WebSocket endpoint
-│   │   ├── routes/
-│   │   │   ├── nudges.py            # GET /nudges/active, POST /nudges/{id}/feedback
-│   │   │   ├── schedule.py          # GET /schedule/today
-│   │   │   ├── habits.py            # GET /habits
-│   │   │   ├── memory.py            # GET /memory/query
-│   │   │   ├── tasks.py             # POST /tasks
-│   │   │   └── settings.py          # GET/PUT /settings
-│   │   └── websocket.py             # WS /ws/nudges → push to Electron
-│   ├── scheduler.py                 # APScheduler setup — registers all periodic jobs
-│   ├── main.py                      # Entry point — starts daemon + scheduler + uvicorn
-│   └── requirements.txt
+│   │   ├── __init__.py
+│   │   ├── behavior_model.py        # Markov chain (v1) → GNN (v2) temporal model + cognitive state classifier
+│   │   ├── context_fusion.py        # Merges all signals into unified context object (calendar + notes + behavior + state)
+│   │   ├── urgency_engine.py        # Scoring formula + OpenRouter LLM call + rule-based fallback
+│   │   └── interrupt_gate.py        # Blocks during deep_focus or active meetings; queues for later
+│   ├── api_main.py                  # FastAPI app — all REST endpoints + WebSocket in single file
+│   ├── scheduler.py                 # APScheduler — runs ingestion + eval cycle every 15 min
+│   ├── main.py                      # Entry point — starts DB + scheduler + uvicorn
+│   ├── requirements.txt
+│   └── tests/
+│       ├── conftest.py              # sys.path setup for test imports
+│       ├── test_db.py               # SQLite insert/read tests
+│       ├── test_interrupt_gate.py   # Gate blocking/allowing tests
+│       └── test_urgency_engine.py   # Urgency candidate generation tests
 │
 ├── aria-desktop/                    # Electron + React frontend
 │   ├── electron/
-│   │   ├── main.js                  # Tray icon, window management, IPC handlers
-│   │   ├── preload.js               # Electron contextBridge — exposes IPC to renderer
-│   │   └── icons/                   # Tray icon PNGs (idle, active, muted)
+│   │   ├── main.js                  # Tray icon, popup window, dashboard window, IPC
+│   │   └── preload.js               # contextBridge — exposes ariaDesktop API to renderer
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── TrayPopup.jsx        # Compact 360×120 nudge card
@@ -485,6 +483,7 @@ aria/
 │   │   │   └── useWebSocket.js      # WebSocket connection to Python backend
 │   │   ├── App.jsx
 │   │   └── main.jsx
+│   ├── index.html
 │   ├── package.json
 │   └── vite.config.js
 │
@@ -501,10 +500,16 @@ aria/
 │   ├── app.json
 │   └── package.json
 │
-└── docs/
-    ├── architecture.md
-    ├── api-reference.md
-    └── setup-guide.md
+├── docs/
+│   ├── architecture.md              # System architecture, file mapping, data flow
+│   ├── api-reference.md             # Full REST + WebSocket endpoint reference
+│   └── setup-guide.md               # Installation and configuration walkthrough
+│
+├── .env.example                     # Environment variable template
+├── AGENTS.md                        # Agent onboarding playbook
+├── ARIA_PRD.md                      # This file — full requirements contract
+├── ARIA_WORKFLOW_CHECKLIST.md        # Phase-by-phase build tracker
+└── README.md                        # Project entry point and orientation
 ```
 
 ---
@@ -622,7 +627,7 @@ All endpoints on `http://127.0.0.1:8742`. Auth: `Authorization: Bearer <token>` 
 
 ---
 
-### Phase 1 — Data Pipeline `Week 1`
+### Phase 1 — Data Pipeline `Week 1` `[DONE]`
 
 **Goal:** Real data flowing into SQLite. No AI yet.
 
@@ -645,7 +650,7 @@ All endpoints on `http://127.0.0.1:8742`. Auth: `Authorization: Bearer <token>` 
 
 ---
 
-### Phase 2 — Rule-Based Nudges `Week 2`
+### Phase 2 — Rule-Based Nudges `Week 2` `[DONE]`
 
 **Goal:** First working nudges using hardcoded rules. Proves the end-to-end pipeline.
 
@@ -665,7 +670,7 @@ pip install notify-py
 
 ---
 
-### Phase 3 — Memory Layer `Week 3`
+### Phase 3 — Memory Layer `Week 3` `[PARTIAL]`
 
 **Goal:** ARIA remembers things across sessions and can retrieve relevant past context.
 
@@ -688,7 +693,7 @@ ollama pull llama3.2:3b
 
 ---
 
-### Phase 4 — Behavior Model `Week 4–5`
+### Phase 4 — Behavior Model `Week 4–5` `[PARTIAL]`
 
 **Goal:** ARIA predicts what you need based on your personal patterns, not generic rules.
 
@@ -720,7 +725,7 @@ pip install torch torch-geometric
 
 ---
 
-### Phase 5 — LLM Suggestion Generator + Interrupt Gate `Week 5–6`
+### Phase 5 — LLM Suggestion Generator + Interrupt Gate `Week 5–6` `[PARTIAL]`
 
 **Goal:** Natural-language nudges generated by an LLM, gated so they only appear when you can receive them.
 
@@ -760,7 +765,7 @@ pip install requests
 
 ---
 
-### Phase 6 — Desktop App (Electron + React + HeroUI) `Week 6–7`
+### Phase 6 — Desktop App (Electron + React + HeroUI) `Week 6–7` `[PARTIAL]`
 
 **Goal:** Real installable Windows app with tray icon, popup, expandable panel, and full dashboard.
 
@@ -804,7 +809,7 @@ npm install electron @heroui/react tailwindcss zustand @tanstack/react-query rec
 
 ---
 
-### Phase 7 — Phone Companion (Expo React Native) `Week 8`
+### Phase 7 — Phone Companion (Expo React Native) `Week 8` `[PARTIAL]`
 
 **Goal:** Android/iOS app that receives nudges when you're away from the desktop.
 

@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from engine.behavior_model import BehaviorModel
@@ -14,6 +15,16 @@ from storage.memory import MemoryStore
 db = DB()
 scheduler = AriaScheduler(db=db)
 app = FastAPI(title="ARIA Local API", version="0.1.0")
+
+# CORS middleware for mobile companion access over LAN
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 behavior_model = BehaviorModel()
 try:
     memory_store = MemoryStore()
