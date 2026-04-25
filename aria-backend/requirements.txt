@@ -1,0 +1,13 @@
+APScheduler>=3.10
+fastapi>=0.115
+uvicorn>=0.30
+requests>=2.32
+watchdog>=4.0
+google-auth-oauthlib>=1.2
+google-api-python-client>=2.149
+python-dotenv>=1.0
+chromadb>=0.5
+sentence-transformers>=3.0
+keyring>=24.0
+websockets>=13.0
+pytest>=8.0
