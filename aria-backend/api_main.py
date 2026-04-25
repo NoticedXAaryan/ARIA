@@ -13,7 +13,10 @@ from connectors.google_oauth import get_oauth_manager
 from engine.behavior_model import BehaviorModel
 from scheduler import AriaScheduler
 from storage.db import DB
-from storage.memory import MemoryStore
+from storage.memory import MemoryStore, migrate_existing_to_episodic
+
+# Trigger migration from old ChromaDB collection to new episodic collection
+migrate_existing_to_episodic()
 
 db = DB()
 scheduler = AriaScheduler(db=db)

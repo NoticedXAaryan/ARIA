@@ -27,11 +27,11 @@ def _note_matches_meeting(meeting_title: str, note_rows: list[dict[str, Any]]) -
     return False
 
 
-def _generate_text_with_openrouter(context: dict[str, Any], rule_hint: str) -> str | None:
+def _generate_text_with_openrouter(context: dict[str, Any], rule_hint: str) -> str:
     """Generate a natural language suggestion using OpenRouter free models."""
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        return None
+        raise ValueError("No OPENROUTER_API_KEY")
 
     # Build a compact, privacy-safe prompt
     meeting = context.get("next_meeting") or {}
@@ -47,52 +47,94 @@ def _generate_text_with_openrouter(context: dict[str, Any], rule_hint: str) -> s
         f"Be specific, helpful, and encouraging. Don't use private details. End with a clear action step."
     )
 
-    try:
-        response = requests.post(
-            OPENROUTER_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "HTTP-Referer": "http://localhost:8742",
-                "X-Title": "ARIA Assistant",
-            },
-            json={
-                "model": "openrouter/auto",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 100,
-            },
-            timeout=15,
-        )
-        response.raise_for_status()
-        text = response.json()["choices"][0]["message"]["content"].strip()
-        return text if len(text) > 10 else None
-    except Exception as e:
-        logger.warning("OpenRouter call failed: %s", e)
-        return _generate_text_with_ollama(context, rule_hint)
+    response = requests.post(
+        OPENROUTER_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "http://localhost:8742",
+            "X-Title": "ARIA Assistant",
+        },
+        json={
+            "model": "openrouter/auto",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 100,
+        },
+        timeout=15,
+    )
+    response.raise_for_status()
+    text = response.json()["choices"][0]["message"]["content"].strip()
+    if len(text) <= 10:
+        raise ValueError("Response too short")
+    return text
 
 
-def _generate_text_with_ollama(context: dict[str, Any], rule_hint: str) -> str | None:
+def _generate_text_with_ollama(context: dict[str, Any], rule_hint: str) -> str:
     """Fallback: generate suggestion text using local Ollama."""
     ollama_url = os.getenv("ARIA_OLLAMA_URL", "http://127.0.0.1:11434")
+    
+    # Check available models
+    model = "llama3.2"
+    try:
+        resp = requests.get(f"{ollama_url}/api/tags", timeout=5)
+        resp.raise_for_status()
+        models = [m.get("name", "") for m in resp.json().get("models", [])]
+        if not any(m.startswith("llama3.2") for m in models):
+            if any(m.startswith("phi3") for m in models):
+                model = "phi3"
+    except Exception as e:
+        logger.warning("Could not fetch Ollama models: %s", e)
+
     cognitive = context.get("cognitive_state", "normal")
     prompt = (
         f"Generate one short AI assistant nudge under 35 words. "
         f"Context: state={cognitive}. Rule: {rule_hint}. "
         f"Be helpful and actionable."
     )
+    response = requests.post(
+        f"{ollama_url}/api/generate",
+        json={"model": model, "prompt": prompt, "stream": False},
+        timeout=30,
+    )
+    response.raise_for_status()
+    text = response.json().get("response", "").strip()
+    if len(text) <= 10:
+        raise ValueError("Response too short")
+    return text
+
+
+def get_nudge_text(context: dict[str, Any], rule_hint: str, db: DB | None) -> str:
+    # 1. Try OpenRouter
     try:
-        response = requests.post(
-            f"{ollama_url}/api/generate",
-            json={"model": "llama3.2:3b", "prompt": prompt, "stream": False},
-            timeout=30,
-        )
-        response.raise_for_status()
-        text = response.json().get("response", "").strip()
-        return text if len(text) > 10 else None
-    except Exception:
-        return None
+        text = _generate_text_with_openrouter(context, rule_hint)
+        if db:
+            db.increment_metric("path_openrouter")
+        return text
+    except Exception as e:
+        logger.warning("OpenRouter failed: %s", e)
+    
+    # 2. Try Ollama
+    try:
+        text = _generate_text_with_ollama(context, rule_hint)
+        if db:
+            db.increment_metric("path_ollama")
+        return text
+    except Exception as e:
+        logger.warning("Ollama failed: %s", e)
+        
+    # 3. Fallback template
+    if db:
+        db.increment_metric("path_template")
+    title = "Upcoming activity"
+    if "meeting" in rule_hint and context.get("next_meeting"):
+        title = context["next_meeting"].get("title", "Upcoming meeting")
+    elif "email" in rule_hint:
+        title = "Unread emails"
+    elif "focus" in rule_hint:
+        title = "Focus block"
+    return f"Reminder: {title} — based on your usual pattern at this time."
 
 
-def evaluate_context(context: dict[str, Any]) -> list[NudgeCandidate]:
+def evaluate_context(context: dict[str, Any], db: DB | None = None) -> list[NudgeCandidate]:
     """Evaluate context and generate nudge candidates from multiple rules."""
     candidates: list[NudgeCandidate] = []
     now = int(time.time())
@@ -111,7 +153,7 @@ def evaluate_context(context: dict[str, Any]) -> list[NudgeCandidate]:
             cognitive_load_factor = 1.0 if not is_high_load else 1.2
             urgency = min(1.0, (deadline_proximity * impact_weight) / cognitive_load_factor)
             default_text = f"Meeting in {starts_in_min} min and no prep note found. Draft 3 bullet points now."
-            llm_text = _generate_text_with_openrouter(context, "meeting_soon_no_prep")
+            llm_text = get_nudge_text(context, "meeting_soon_no_prep", db)
             candidates.append(
                 NudgeCandidate(
                     reason="meeting_soon_no_prep",
@@ -131,7 +173,7 @@ def evaluate_context(context: dict[str, Any]) -> list[NudgeCandidate]:
     if len(unread_important) >= 3:
         urgency = min(1.0, 0.4 + len(unread_important) * 0.05)
         default_text = f"You have {len(unread_important)} unread important emails. Take 5 minutes to triage them."
-        llm_text = _generate_text_with_openrouter(context, f"unread_important_emails_count={len(unread_important)}")
+        llm_text = get_nudge_text(context, f"unread_important_emails_count={len(unread_important)}", db)
         candidates.append(
             NudgeCandidate(
                 reason="unread_important_emails",
@@ -146,7 +188,7 @@ def evaluate_context(context: dict[str, Any]) -> list[NudgeCandidate]:
     total_focus_min = sum((e.get("end_ts", e["start_ts"]) - e["start_ts"]) / 60 for e in focus_events if e["start_ts"] < now)
     if total_focus_min >= 120:
         default_text = f"You've been focused for {int(total_focus_min)} minutes. A short break boosts productivity."
-        llm_text = _generate_text_with_openrouter(context, f"long_focus_block_minutes={int(total_focus_min)}")
+        llm_text = get_nudge_text(context, f"long_focus_block_minutes={int(total_focus_min)}", db)
         candidates.append(
             NudgeCandidate(
                 reason="focus_break_reminder",
@@ -160,7 +202,7 @@ def evaluate_context(context: dict[str, Any]) -> list[NudgeCandidate]:
     calendar_load = context.get("calendar_load_next_2h", 0)
     if calendar_load >= 4:
         default_text = f"Heads up: {calendar_load} meetings in the next 2 hours. Consider blocking prep time."
-        llm_text = _generate_text_with_openrouter(context, f"high_meeting_load={calendar_load}")
+        llm_text = get_nudge_text(context, f"high_meeting_load={calendar_load}", db)
         candidates.append(
             NudgeCandidate(
                 reason="high_meeting_load",
@@ -176,7 +218,7 @@ def evaluate_context(context: dict[str, Any]) -> list[NudgeCandidate]:
         upcoming_meetings = len([e for e in context.get("upcoming_events", []) if e.get("type") == "meeting"])
         if upcoming_meetings > 0:
             default_text = f"Good morning! You have {upcoming_meetings} meetings today. Review your schedule and plan your focus blocks."
-            llm_text = _generate_text_with_openrouter(context, f"morning_planning_meetings={upcoming_meetings}")
+            llm_text = get_nudge_text(context, f"morning_planning_meetings={upcoming_meetings}", db)
             candidates.append(
                 NudgeCandidate(
                     reason="morning_planning",

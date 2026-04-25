@@ -235,6 +235,20 @@ class DB:
             )
             conn.commit()
 
+    def expire_queued_nudges(self, max_age_seconds: int = 14400) -> int:
+        cutoff = int(time.time()) - max_age_seconds
+        with self.connect() as conn:
+            cur = conn.execute(
+                """
+                UPDATE nudge_log
+                SET outcome = 'expired'
+                WHERE (outcome IS NULL OR outcome = 'queued') AND generated_at < ?
+                """,
+                (cutoff,),
+            )
+            conn.commit()
+            return cur.rowcount
+
     def get_settings(self) -> dict[str, object]:
         with self.connect() as conn:
             rows = list(conn.execute("SELECT key, value FROM settings"))
@@ -249,6 +263,14 @@ class DB:
                     (key, json.dumps(value)),
                 )
             conn.commit()
+
+    def increment_metric(self, key: str) -> None:
+        settings = self.get_settings()
+        current = settings.get(key, 0)
+        if isinstance(current, int):
+            self.update_settings({key: current + 1})
+        else:
+            self.update_settings({key: 1})
 
     def add_task(self, title: str) -> int:
         with self.connect() as conn:

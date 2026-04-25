@@ -43,6 +43,11 @@ class AriaScheduler:
         self.scheduler.shutdown(wait=False)
 
     def run_cycle(self) -> dict[str, int]:
+        # Phase 0: Expire old queued nudges
+        expired_count = self.db.expire_queued_nudges(4 * 3600)
+        if expired_count > 0:
+            logger.info("Expired %d old nudges", expired_count)
+
         # Phase 1: Ingest from all connectors
         ingested = 0
         connectors = [self.google, self.activity, self.notes, self.gmail]
@@ -54,7 +59,17 @@ class AriaScheduler:
                     for event in events:
                         text = f"{event.type} {event.title or ''}".strip()
                         if text:
-                            self.memory.embed_and_store(text, {"source": event.source, "ts": event.start_ts})
+                            import hashlib
+                            event_id = event.external_id or hashlib.sha1(text.encode("utf-8")).hexdigest()
+                            self.memory.add_episodic_event(
+                                event_id=event_id,
+                                source=event.source,
+                                event_type=event.type,
+                                timestamp=event.start_ts,
+                                title=event.title or "",
+                                body=text,
+                                entities_json="{}"
+                            )
             except Exception as e:
                 logger.warning("Connector %s failed: %s", type(connector).__name__, e)
 
@@ -63,7 +78,7 @@ class AriaScheduler:
         cognitive_state = context.get("cognitive_state", "normal")
 
         # Phase 3: Evaluate urgency and generate candidates
-        candidates = evaluate_context(context)
+        candidates = evaluate_context(context, db=self.db)
 
         # Phase 4: Check interrupt gate using actual cognitive state
         active_events = [e for e in context["upcoming_events"] if e.get("type") == "meeting"]
