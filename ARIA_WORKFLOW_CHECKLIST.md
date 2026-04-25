@@ -137,9 +137,9 @@ Ship a working proactive assistant that users install once and mostly forget, wh
 ### Build tasks
 - [x] Initial Markov-style model scaffold present
 - [x] Cognitive state classifier implemented (deep_focus / flow / normal / overloaded)
-- [~] Upgrade to PRD-required `(hour_bucket, day_of_week) -> next_activity_type` training from enough history
-- [ ] Add weekly retrain workflow over recent window
-- [ ] Add data sufficiency gating for optional GNN upgrade
+- [x] Upgrade to PRD-required `(hour_bucket, day_of_week) -> next_activity_type` training from enough history
+- [x] Add weekly retrain workflow over recent window
+- [x] Add data sufficiency gating for optional GNN upgrade
 - [ ] Add richer cognitive-state classification signals (app-switching + meeting density + focus duration)
 
 ### Tests for this phase
@@ -155,10 +155,10 @@ Ship a working proactive assistant that users install once and mostly forget, wh
 ### Build tasks
 - [x] Interrupt gate logic exists
 - [x] OpenRouter call path exists
-- [~] Add strict compact prompt constraints and privacy guardrails
-- [ ] Add fallback to local Ollama when OpenRouter fails
+- [x] Add strict compact prompt constraints and privacy guardrails
+- [x] Add fallback to local Ollama when OpenRouter fails
 - [ ] Implement queue re-evaluation and 4-hour expiry
-- [ ] Add urgency weight calibration from feedback (EMA)
+- [x] Add urgency weight calibration from feedback (EMA)
 
 ### Tests for this phase
 - [x] Existing interrupt gate tests (deep focus and normal state)
@@ -173,9 +173,9 @@ Ship a working proactive assistant that users install once and mostly forget, wh
 
 ### Build tasks
 - [x] Electron + React shell and components present
-- [~] Implement exact compact popup behavior per PRD (12s countdown, dimensions, actions)
-- [~] Implement expanded panel full action logic with snooze variants
-- [~] Ensure dashboard tabs fully wired to backend routes and live updates
+- [x] Implement exact compact popup behavior per PRD (12s countdown, dimensions, actions)
+- [x] Implement expanded panel full action logic with snooze variants
+- [x] Ensure dashboard tabs fully wired to backend routes and live updates
 - [ ] Ensure tray states and pause behavior fully match PRD
 
 ### Tests for this phase
@@ -192,9 +192,9 @@ Ship a working proactive assistant that users install once and mostly forget, wh
 ### Build tasks
 - [x] Expo app scaffolding and screens exist
 - [x] Android export build check passes
-- [~] Complete desktop pairing (token + IP/QR) and secure persistence
-- [~] Ensure action sync parity with desktop outcomes
-- [ ] Add away-from-desktop nudge routing logic
+- [x] Complete desktop pairing (token + IP/QR) and secure persistence
+- [x] Ensure action sync parity with desktop outcomes
+- [x] Add away-from-desktop nudge routing logic
 
 ### Tests for this phase
 - [x] Build/export test currently passes

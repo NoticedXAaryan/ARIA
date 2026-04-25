@@ -4,6 +4,7 @@ const path = require("path");
 let tray;
 let dashboardWindow;
 let panelWindow;
+let toastWindow;
 
 function createDashboard() {
   dashboardWindow = new BrowserWindow({
@@ -38,6 +39,28 @@ function createPanel() {
   panelWindow.loadURL("http://localhost:5173/#/panel");
 }
 
+function createToast() {
+  const primary = screen.getPrimaryDisplay().workAreaSize;
+  toastWindow = new BrowserWindow({
+    width: 280,
+    height: 120, // Expands dynamically in React if needed
+    x: primary.width - 296, // 16px padding
+    y: primary.height - 200,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    level: "floating",
+    skipTaskbar: true,
+    hasShadow: false,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js")
+    }
+  });
+  toastWindow.loadURL("http://localhost:5173/#/toast");
+}
+
 function createTray() {
   const fallbackIcon = nativeImage.createEmpty();
   tray = new Tray(fallbackIcon);
@@ -54,6 +77,7 @@ function createTray() {
 app.whenReady().then(() => {
   createDashboard();
   createPanel();
+  createToast();
   createTray();
 });
 
@@ -78,6 +102,31 @@ ipcMain.on("panel:toggle", (_event, isExpanded) => {
 
 ipcMain.on("nudge:new", (_event, payload) => {
   panelWindow.webContents.send("nudge:new", payload);
+});
+
+// Toast specific IPC
+ipcMain.on("toast:show", (_event, nudge) => {
+  // Check for fullscreen app suppression
+  // We use a simple bounds check here to determine if any window might be fullscreen
+  // Note: Electron's screen API doesn't have a direct 'isFullScreen' for other apps on Windows,
+  // but ARIA is meant to be proactive, so we can suppress if bounds are extremely large or just show it anyway.
+  // For now, we show the toast window.
+  toastWindow.showInactive();
+  toastWindow.webContents.send("toast:data", nudge);
+});
+
+ipcMain.on("toast:hide", () => {
+  toastWindow.hide();
+});
+
+ipcMain.on("toast:resize", (_event, height) => {
+  const primary = screen.getPrimaryDisplay().workAreaSize;
+  toastWindow.setBounds({
+    x: primary.width - 296,
+    y: primary.height - 80 - height, // keep it above taskbar dynamically
+    width: 280,
+    height: height
+  });
 });
 
 ipcMain.handle("dialog:selectFolder", async () => {

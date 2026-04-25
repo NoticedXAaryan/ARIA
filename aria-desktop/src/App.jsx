@@ -9,6 +9,7 @@ import TrayPopup from "./components/TrayPopup";
 import ExpandedPanel from "./components/ExpandedPanel";
 import SidePanel from "./components/SidePanel";
 import OnboardingWizard from "./components/OnboardingWizard";
+import NudgeToast from "./components/NudgeToast";
 
 const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
 
@@ -90,6 +91,10 @@ export default function App() {
   // Handle hash routing for the SidePanel
   if (window.location.hash === "#/panel") {
     return <SidePanel />;
+  }
+  
+  if (window.location.hash === "#/toast") {
+    return <NudgeToast />;
   }
 
   return (
