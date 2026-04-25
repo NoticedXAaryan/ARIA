@@ -1,11 +1,47 @@
+# ─── ARIA .gitignore ───
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 .venv/
-.env
+*.egg-info/
 
+# Node
 node_modules/
 dist/
+.next/
 
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+aria-backend/.env
+aria-desktop/.env
+
+# Firebase
+**/firebase-debug.log
+**/firebaserc
+
+# Google OAuth tokens
+**/google_token.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
 *.log
+npm-debug.log*
 
+# Build artifacts
+*.tgz
+*.tar.gz
