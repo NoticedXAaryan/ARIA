@@ -158,6 +158,20 @@ class DB:
                 )
             )
 
+    def get_recent_emails(self, lookback_seconds: int = 86400) -> list[sqlite3.Row]:
+        now_ts = int(time.time())
+        with self.connect() as conn:
+            return list(
+                conn.execute(
+                    """
+                    SELECT * FROM events
+                    WHERE source = 'gmail' AND start_ts >= ?
+                    ORDER BY start_ts DESC
+                    """,
+                    (now_ts - lookback_seconds,),
+                )
+            )
+
     def log_nudge(
         self,
         urgency_score: float,

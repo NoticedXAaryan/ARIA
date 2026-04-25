@@ -1,26 +1,36 @@
 @echo off
 title ARIA - Start All Services
-echo Starting ARIA (Anticipatory Reasoning ^& Intelligent Assistance)...
-echo ==================================================================
+color 0A
+echo.
+echo  ╔══════════════════════════════════════════════════════════╗
+echo  ║   ARIA - Anticipatory Reasoning ^& Intelligent Assistance  ║
+echo  ╚══════════════════════════════════════════════════════════╝
+echo.
+
+:: ─── 1. Backend (Python FastAPI) ─────────────────────────────
+echo  [1/2] Starting Backend API on http://127.0.0.1:8742 ...
+start "ARIA Backend" cmd /k "cd /d "%~dp0aria-backend" && (if not exist .venv (echo Creating virtual environment... && python -m venv .venv)) && call .venv\Scripts\activate.bat && pip install -r requirements.txt -q && echo. && echo ======================================== && echo   ARIA Backend starting on port 8742 && echo ======================================== && python main.py"
+
+:: Wait a few seconds for backend to start before launching frontend
+timeout /t 4 /nobreak >nul
+
+:: ─── 2. Desktop UI (Vite Dev Server) ─────────────────────────
+echo  [2/2] Starting Desktop UI on http://localhost:5173 ...
+start "ARIA Desktop" cmd /k "cd /d "%~dp0aria-desktop" && npm install --silent && echo. && echo ======================================== && echo   ARIA Desktop UI starting on port 5173 && echo ======================================== && npm run dev"
+
+:: Wait for Vite to boot, then open in browser
+timeout /t 5 /nobreak >nul
+start http://localhost:5173
 
 echo.
-echo 1. Starting Backend Server...
-start "ARIA Backend" cmd /k "if not exist .venv (python -m venv .venv) && .venv\Scripts\activate && pip install -r aria-backend\requirements.txt && if not exist .env (copy .env.example .env) && python aria-backend\main.py"
-
+echo  ╔══════════════════════════════════════════════════════════╗
+echo  ║   All services launched!                                   ║
+echo  ║                                                            ║
+echo  ║   Backend API  : http://127.0.0.1:8742                    ║
+echo  ║   Desktop UI   : http://localhost:5173                     ║
+echo  ║                                                            ║
+echo  ║   Keep the terminal windows open to view logs.             ║
+echo  ║   Close them to stop ARIA.                                 ║
+echo  ╚══════════════════════════════════════════════════════════╝
 echo.
-echo 2. Starting Desktop UI (React/Vite)...
-start "ARIA Desktop Vite" cmd /k "cd aria-desktop && npm install && npm run dev"
-
-echo.
-echo 3. Starting Desktop Electron Shell...
-start "ARIA Desktop Electron" cmd /k "cd aria-desktop && npm install && npm run electron"
-
-echo.
-echo 4. Starting Mobile Companion (Expo)...
-start "ARIA Mobile Expo" cmd /k "cd aria-mobile && npm install && npx expo start"
-
-echo.
-echo All ARIA components have been launched in separate terminal windows!
-echo Keep the terminal windows open to view logs.
-echo ==================================================================
 pause

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from connectors.activity_watcher import ActivityWatchConnector
 from connectors.google_calendar import GoogleCalendarConnector
+from connectors.gmail_connector import GmailConnector
 from connectors.notes_watcher import NotesWatcherConnector
 from engine.behavior_model import BehaviorModel
 from engine.context_fusion import build_context
@@ -26,6 +26,7 @@ class AriaScheduler:
         self.google = GoogleCalendarConnector()
         self.activity = ActivityWatchConnector()
         self.notes = NotesWatcherConnector()
+        self.gmail = GmailConnector()
         self.behavior_model = BehaviorModel()
         try:
             self.memory = MemoryStore()
@@ -44,14 +45,18 @@ class AriaScheduler:
     def run_cycle(self) -> dict[str, int]:
         # Phase 1: Ingest from all connectors
         ingested = 0
-        for connector in (self.google, self.activity, self.notes):
-            events = connector.fetch_events()
-            ingested += self.db.insert_events(events)
-            if self.memory:
-                for event in events:
-                    text = f"{event.type} {event.title or ''}".strip()
-                    if text:
-                        self.memory.embed_and_store(text, {"source": event.source, "ts": event.start_ts})
+        connectors = [self.google, self.activity, self.notes, self.gmail]
+        for connector in connectors:
+            try:
+                events = connector.fetch_events()
+                ingested += self.db.insert_events(events)
+                if self.memory:
+                    for event in events:
+                        text = f"{event.type} {event.title or ''}".strip()
+                        if text:
+                            self.memory.embed_and_store(text, {"source": event.source, "ts": event.start_ts})
+            except Exception as e:
+                logger.warning("Connector %s failed: %s", type(connector).__name__, e)
 
         # Phase 2: Build context with behavior model integration
         context = build_context(self.db, behavior_model=self.behavior_model)

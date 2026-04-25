@@ -8,10 +8,10 @@ from storage.db import DB
 
 
 def build_context(db: DB, behavior_model: BehaviorModel | None = None) -> dict[str, Any]:
-    """Build a unified context object by fusing calendar, notes, and behavior model signals.
+    """Build a unified context object by fusing calendar, notes, email, and behavior model signals.
 
     This is the L4 Context Fusion Core from the ARIA pipeline.
-    Combines: current time + calendar lookahead + recent notes + behavior prediction + cognitive state.
+    Combines: current time + calendar lookahead + recent notes + emails + behavior prediction + cognitive state.
     """
     upcoming = db.get_upcoming_events(horizon_seconds=7200)
     notes = db.get_recent_note_events(lookback_seconds=86400)
@@ -22,6 +22,11 @@ def build_context(db: DB, behavior_model: BehaviorModel | None = None) -> dict[s
 
     next_meeting = next((row for row in upcoming_dicts if row.get("type") == "meeting"), None)
     calendar_load = sum(1 for row in upcoming_dicts if row.get("type") == "meeting")
+
+    # Email context
+    emails = db.get_recent_emails(lookback_seconds=86400)
+    email_dicts = [dict(r) for r in emails]
+    unread_count = sum(1 for e in email_dicts if _is_unread(e))
 
     # Behavior model predictions
     cognitive_state = "normal"
@@ -35,8 +40,22 @@ def build_context(db: DB, behavior_model: BehaviorModel | None = None) -> dict[s
         "now": now,
         "upcoming_events": upcoming_dicts,
         "recent_notes": notes_dicts,
+        "recent_emails": email_dicts,
         "next_meeting": next_meeting,
         "calendar_load_next_2h": calendar_load,
+        "unread_email_count": unread_count,
         "cognitive_state": cognitive_state,
         "predicted_activity": predicted_activity,
     }
+
+
+def _is_unread(email_row: dict) -> bool:
+    """Check if an email event has unread flag in metadata."""
+    try:
+        import json
+        meta = email_row.get("metadata_json", "{}")
+        if isinstance(meta, str):
+            meta = json.loads(meta)
+        return meta.get("is_unread", False)
+    except Exception:
+        return False

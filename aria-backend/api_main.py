@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
+import requests
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from connectors.google_oauth import get_oauth_manager
 from engine.behavior_model import BehaviorModel
 from scheduler import AriaScheduler
 from storage.db import DB
@@ -14,9 +17,9 @@ from storage.memory import MemoryStore
 
 db = DB()
 scheduler = AriaScheduler(db=db)
-app = FastAPI(title="ARIA Local API", version="0.1.0")
+app = FastAPI(title="ARIA Local API", version="0.2.0")
 
-# CORS middleware for mobile companion access over LAN
+# CORS middleware for desktop + mobile companion access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,6 +36,8 @@ except Exception:
 ws_clients: set[WebSocket] = set()
 
 
+# ─── Payload Models ───
+
 class FeedbackPayload(BaseModel):
     outcome: str
 
@@ -44,6 +49,16 @@ class TaskPayload(BaseModel):
 class SettingsPayload(BaseModel):
     updates: dict[str, Any]
 
+
+class OpenRouterValidatePayload(BaseModel):
+    api_key: str
+
+
+class NotesPathPayload(BaseModel):
+    path: str
+
+
+# ─── Status & Core Endpoints ───
 
 @app.get("/api/status")
 def status() -> dict:
@@ -129,8 +144,72 @@ def get_settings() -> dict:
 @app.put("/api/settings")
 def put_settings(payload: SettingsPayload) -> dict:
     db.update_settings(payload.updates)
+    # If OpenRouter key was updated, set it in env for the urgency engine
+    if "openrouter_api_key" in payload.updates:
+        os.environ["OPENROUTER_API_KEY"] = str(payload.updates["openrouter_api_key"])
+    if "notes_folder_path" in payload.updates:
+        os.environ["ARIA_NOTES_PATH"] = str(payload.updates["notes_folder_path"])
     return {"ok": True}
 
+
+# ─── Setup Endpoints ───
+
+@app.get("/api/setup/status")
+def setup_status() -> dict:
+    """Check which services are linked."""
+    oauth = get_oauth_manager()
+    settings = db.get_settings()
+    return {
+        "google_linked": oauth.is_linked(),
+        "notes_configured": bool(settings.get("notes_folder_path")),
+        "openrouter_configured": bool(os.getenv("OPENROUTER_API_KEY") or settings.get("openrouter_api_key")),
+    }
+
+
+@app.get("/api/setup/google/init")
+def google_init() -> dict:
+    """Start Google OAuth flow."""
+    oauth = get_oauth_manager()
+    if oauth.is_linked():
+        return {"status": "already_linked", "linked": True}
+    result = oauth.start_auth_flow()
+    if result == "completed":
+        return {"status": "completed", "linked": True}
+    return {"status": "no_credentials", "error": "Google credentials file not found"}
+
+
+@app.get("/api/setup/google/status")
+def google_status() -> dict:
+    oauth = get_oauth_manager()
+    return {"linked": oauth.is_linked()}
+
+
+@app.post("/api/setup/notes/set")
+def set_notes_path(payload: NotesPathPayload) -> dict:
+    db.update_settings({"notes_folder_path": payload.path})
+    os.environ["ARIA_NOTES_PATH"] = payload.path
+    return {"ok": True}
+
+
+@app.post("/api/setup/openrouter/validate")
+def validate_openrouter(payload: OpenRouterValidatePayload) -> dict:
+    """Test an OpenRouter API key."""
+    try:
+        resp = requests.get(
+            "https://openrouter.ai/api/v1/models",
+            headers={"Authorization": f"Bearer {payload.api_key}"},
+            timeout=10,
+        )
+        if resp.ok:
+            os.environ["OPENROUTER_API_KEY"] = payload.api_key
+            db.update_settings({"openrouter_api_key": payload.api_key})
+            return {"valid": True}
+        return {"valid": False, "error": "Invalid API key"}
+    except Exception as e:
+        return {"valid": False, "error": str(e)}
+
+
+# ─── WebSocket ───
 
 @app.websocket("/ws/nudges")
 async def nudges_socket(ws: WebSocket) -> None:
