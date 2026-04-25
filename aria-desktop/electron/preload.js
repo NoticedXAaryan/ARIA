@@ -17,5 +17,9 @@ contextBridge.exposeInMainWorld("ariaDesktop", {
   onToastData: (cb) => {
     ipcRenderer.removeAllListeners("toast:data");
     ipcRenderer.on("toast:data", (_event, payload) => cb(payload));
-  }
+  },
+  
+  // System
+  checkUpdate: () => ipcRenderer.invoke("system:check-update"),
+  toggleAutoLaunch: (enable) => ipcRenderer.send("system:toggle-auto-launch", enable)
 });

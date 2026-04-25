@@ -98,6 +98,29 @@ export default function PatternsTab() {
   const rhythm = data?.rhythm || {};
   const stats = data?.stats || {};
   const dayWeights = rhythm[String(selectedDay)] || {};
+  
+  if ((stats.days_of_data || 0) < 7) {
+    const daysNeeded = 7 - (stats.days_of_data || 0);
+    const targetDate = new Date(Date.now() + daysNeeded * 86400 * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return (
+      <div style={{ padding: "20px 16px", color: "var(--aria-text)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <BarChart3 size={16} color="var(--aria-secondary)" />
+          <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "var(--aria-text-muted)", margin: 0 }}>
+            Your Rhythm
+          </h3>
+        </div>
+        <div style={{ padding: "40px 0", textAlign: "center", color: "var(--aria-text-muted)" }}>
+          <Database size={24} style={{ margin: "0 auto 10px", opacity: 0.3 }} />
+          <p style={{ fontSize: 13, lineHeight: 1.5, maxWidth: 220, margin: "0 auto" }}>
+            ARIA needs a few more days to learn your rhythm.
+            <br/><br/>
+            Check back on <strong>{targetDate}</strong>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Best focus time for selected day
   let bestHour = "—";

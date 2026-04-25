@@ -263,6 +263,17 @@ export default function SidePanel() {
           <Tab key="settings" title="Settings" />
         </Tabs>
       </div>
+
+      {/* First Week Experience Progress Bar */}
+      {status?.days_active < 7 && (
+        <div style={{ padding: "8px 16px", background: "rgba(59, 130, 246, 0.1)", borderBottom: "1px solid rgba(59, 130, 246, 0.2)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6" }}>ARIA is learning</span>
+            <span style={{ fontSize: 11, color: "var(--aria-text-muted)" }}>Day {status.days_active || 1} of 7</span>
+          </div>
+          <Progress size="sm" value={((status.days_active || 1) / 7) * 100} color="primary" />
+        </div>
+      )}
       
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
         {currentTab === "today" && (
@@ -285,7 +296,7 @@ export default function SidePanel() {
                 {nudges.length === 0 && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: "30px 0", textAlign: "center", color: "var(--aria-text-muted)" }}>
                     <Sparkles size={24} style={{ margin: "0 auto 10px", opacity: 0.3 }} />
-                    <p style={{ fontSize: 13 }}>All caught up</p>
+                    <p style={{ fontSize: 13 }}>All clear. ARIA is watching in the background.</p>
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -1,10 +1,30 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, dialog } = require("electron");
 const path = require("path");
+const { spawn } = require("child_process");
+const AutoLaunch = require("auto-launch");
 
 let tray;
 let dashboardWindow;
 let panelWindow;
 let toastWindow;
+let pythonProcess;
+
+const ariaAutoLauncher = new AutoLaunch({
+  name: 'ARIA',
+  path: app.getPath('exe'),
+});
+
+function startPythonDaemon() {
+  const backendPath = path.join(__dirname, "../../aria-backend");
+  pythonProcess = spawn("python", ["main.py"], { cwd: backendPath });
+  
+  pythonProcess.stdout.on("data", (data) => console.log(`Python: ${data}`));
+  pythonProcess.stderr.on("data", (data) => console.error(`Python Error: ${data}`));
+  
+  pythonProcess.on("close", (code) => {
+    console.log(`Python process exited with code ${code}`);
+  });
+}
 
 function createDashboard() {
   dashboardWindow = new BrowserWindow({
@@ -75,10 +95,23 @@ function createTray() {
 }
 
 app.whenReady().then(() => {
+  startPythonDaemon();
   createDashboard();
   createPanel();
   createToast();
   createTray();
+  
+  // Auto-launch handling
+  ariaAutoLauncher.isEnabled().then((isEnabled) => {
+    // Default to on
+    if (!isEnabled) ariaAutoLauncher.enable();
+  }).catch((err) => console.error("AutoLaunch error", err));
+});
+
+app.on("before-quit", () => {
+  if (pythonProcess) {
+    pythonProcess.kill();
+  }
 });
 
 ipcMain.on("panel:expand", () => {
@@ -133,4 +166,25 @@ ipcMain.handle("dialog:selectFolder", async () => {
   const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
   if (result.canceled) return null;
   return result.filePaths[0];
+});
+
+ipcMain.handle("system:check-update", async () => {
+  try {
+    const res = await fetch("https://api.github.com/repos/NoticedXAaryan/ARIA/releases/latest");
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (e) {
+    console.error("Update check failed", e);
+  }
+  return null;
+});
+
+ipcMain.on("system:toggle-auto-launch", (_event, enable) => {
+  if (enable) {
+    ariaAutoLauncher.enable();
+  } else {
+    ariaAutoLauncher.disable();
+  }
 });

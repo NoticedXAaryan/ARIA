@@ -4,7 +4,7 @@ import {
   Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Spinner
 } from "@heroui/react";
 import { 
-  CheckCircle2, XCircle, Settings, Mail, Calendar, Trash2, Smartphone, MonitorPlay, Activity, Brain, Link as LinkIcon
+  CheckCircle2, XCircle, Settings, Mail, Calendar, Trash2, Smartphone, MonitorPlay, Activity, Brain, Link as LinkIcon, AlertCircle, Download
 } from "lucide-react";
 
 const API = import.meta.env.VITE_ARIA_API_URL || "http://127.0.0.1:8742";
@@ -16,11 +16,20 @@ export default function SettingsTab() {
   const [settings, setSettings] = useState({});
   const [memoryStats, setMemoryStats] = useState({ events: 0, facts: 0, habits: 0 });
   const [pairData, setPairData] = useState(null);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [hideUpdate, setHideUpdate] = useState(false);
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
   const {isOpen: isPairOpen, onOpen: onPairOpen, onOpenChange: onPairChange} = useDisclosure();
 
   useEffect(() => {
     fetchData();
+    if (window.ariaDesktop?.checkUpdate) {
+      window.ariaDesktop.checkUpdate().then(data => {
+        if (data && data.tag_name && data.tag_name !== "v1.0.0") {
+          setUpdateInfo(data);
+        }
+      });
+    }
   }, []);
 
   const fetchData = async () => {
@@ -129,24 +138,46 @@ export default function SettingsTab() {
 
   return (
     <div style={{ padding: "0 16px 24px", color: "var(--aria-text)" }}>
+      {updateInfo && !hideUpdate && (
+        <div style={{ marginBottom: 24, padding: "12px 16px", background: "rgba(59, 130, 246, 0.15)", borderRadius: 12, border: "1px solid rgba(59, 130, 246, 0.3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Download size={20} color="#3b82f6" />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Update Available: {updateInfo.tag_name}</div>
+              <div style={{ fontSize: 12, color: "var(--aria-text-muted)" }}>A new version of ARIA is ready.</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button size="sm" color="primary" variant="flat" onPress={() => window.open(updateInfo.html_url, "_blank")}>Download</Button>
+            <Button size="sm" isIconOnly variant="light" onPress={() => setHideUpdate(true)}><XCircle size={16} /></Button>
+          </div>
+        </div>
+      )}
+
       {/* 1. Connected Accounts */}
       <section style={{ marginBottom: 32 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--aria-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Connected Accounts</h3>
         <Card className="glass" style={{ marginBottom: 16 }}>
           <CardBody style={{ gap: 12, padding: 16 }}>
             {accounts.length === 0 ? (
-              <p style={{ fontSize: 13, color: "var(--aria-text-muted)" }}>No accounts connected.</p>
+              <div style={{ textAlign: "center", padding: "16px 0" }}>
+                <p style={{ fontSize: 13, color: "var(--aria-text-muted)", marginBottom: 16 }}>Connect an account to let ARIA organize your events and tasks.</p>
+              </div>
             ) : (
-              accounts.map(acc => (
+              accounts.map(acc => {
+                const healthStatus = getHealthStatus(acc.provider === "google" ? "GoogleCalendar" : "OutlookCalendar");
+                return (
                 <div key={acc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <Avatar name={acc.email} size="sm" src={acc.provider === "google" ? "https://www.google.com/favicon.ico" : "https://outlook.live.com/favicon.ico"} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 500 }}>{acc.email}</div>
-                      <div style={{ fontSize: 12, color: "var(--aria-text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ fontSize: 12, color: "var(--aria-text-muted)", display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ textTransform: "capitalize" }}>{acc.provider}</span>
                         <span>•</span>
-                        {getHealthStatus(acc.provider === "google" ? "GoogleCalendar" : "OutlookCalendar") === "down" ? (
+                        {healthStatus === "auth_required" ? (
+                          <span style={{ color: "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}><AlertCircle size={12}/> Token expired</span>
+                        ) : healthStatus === "down" ? (
                           <span style={{ color: "#ef4444", display: "flex", alignItems: "center", gap: 4 }}><XCircle size={12}/> Error</span>
                         ) : (
                           <span style={{ color: "#22c55e", display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12}/> Syncing</span>
@@ -154,11 +185,16 @@ export default function SettingsTab() {
                       </div>
                     </div>
                   </div>
-                  <Button isIconOnly variant="light" color="danger" size="sm" onPress={() => removeAccount(acc.id)}>
-                    <Trash2 size={16} />
-                  </Button>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {healthStatus === "auth_required" && (
+                      <Button size="sm" color="warning" variant="flat" onPress={acc.provider === "google" ? addGoogleAccount : addOutlookAccount}>Re-authenticate</Button>
+                    )}
+                    <Button isIconOnly variant="light" color="danger" size="sm" onPress={() => removeAccount(acc.id)}>
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
-              ))
+              )})
             )}
           </CardBody>
         </Card>
@@ -240,6 +276,14 @@ export default function SettingsTab() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
               <span style={{ fontSize: 14 }}>Silent on Weekends</span>
               <Switch size="sm" color="secondary" isSelected={settings.silent_weekends !== "false"} onValueChange={(val) => updateSetting("silent_weekends", val ? "true" : "false")} />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 14 }}>Start ARIA when computer starts</span>
+              <Switch size="sm" color="primary" isSelected={settings.auto_launch !== "false"} onValueChange={(val) => {
+                updateSetting("auto_launch", val ? "true" : "false");
+                if (window.ariaDesktop?.toggleAutoLaunch) window.ariaDesktop.toggleAutoLaunch(val);
+              }} />
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

@@ -152,7 +152,7 @@ export default function UpcomingTab() {
       {items.length === 0 ? (
         <div style={{ padding: "30px 0", textAlign: "center", color: "var(--aria-text-muted)" }}>
           <Sparkles size={24} style={{ margin: "0 auto 10px", opacity: 0.3 }} />
-          <p style={{ fontSize: 13 }}>Clear schedule ahead</p>
+          <p style={{ fontSize: 13 }}>Nothing on the calendar for the next 6 hours.</p>
         </div>
       ) : (
         <div>
